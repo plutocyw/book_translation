@@ -1,0 +1,35 @@
+{
+  "source_pdf": "input/book.pdf",
+  "source_page_start": 4,
+  "source_page_end": 247,
+  "source_language": "English",
+  "target_language": "Traditional Chinese",
+  "target_locale": "zh-Hant-TW",
+  "chunk_target_words": 1800,
+  "chunk_max_words": 2300,
+  "previous_translation_chars": 1200,
+  "chapter_memory_chars": 3500,
+  "max_output_tokens": {
+    "terminology": 3000,
+    "translate": 10000,
+    "review": 7000,
+    "adjudicate": 7000
+  },
+  "models": {
+    "terminology": "gpt-5.6-luna",
+    "translate": "gpt-5.6-terra",
+    "review": "gpt-5.6-terra",
+    "adjudicate": "gpt-5.6-sol"
+  },
+  "reasoning_effort": {
+    "terminology": "low",
+    "translate": "low",
+    "review": "medium",
+    "adjudicate": "high"
+  },
+  "pricing_per_million_tokens_usd": {
+    "gpt-5.6-luna": {"input": 1.0, "output": 6.0},
+    "gpt-5.6-terra": {"input": 2.5, "output": 15.0},
+    "gpt-5.6-sol": {"input": 5.0, "output": 30.0}
+  }
+}

@@ -1,0 +1,11 @@
+.DS_Store
+.env
+.venv/
+__pycache__/
+*.py[cod]
+
+# Copyrighted source and generated book contents
+input/
+build/
+output/
+tmp/

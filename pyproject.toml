@@ -1,0 +1,16 @@
+[project]
+name = "book-translation-pipeline"
+version = "0.1.0"
+description = "Resumable PDF-to-Traditional-Chinese book translation pipeline"
+requires-python = ">=3.9"
+dependencies = [
+  "openai>=2.2.0",
+  "pdfplumber>=0.11.0",
+  "pypdf>=5.0.0",
+]
+
+[project.scripts]
+book-translate = "translation_pipeline.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["translation_pipeline*"]
