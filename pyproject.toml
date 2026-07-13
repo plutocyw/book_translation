@@ -7,10 +7,12 @@ dependencies = [
   "openai>=2.2.0",
   "pdfplumber>=0.11.0",
   "pypdf>=5.0.0",
+  "requests>=2.32.0",
 ]
 
 [project.scripts]
 book-translate = "translation_pipeline.cli:main"
+book-notion = "translation_pipeline.notion_sync:main"
 
 [tool.setuptools.packages.find]
 include = ["translation_pipeline*"]

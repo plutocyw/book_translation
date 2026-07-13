@@ -5,10 +5,89 @@ Baal,巴爾,character,approved,chunk-0001,Official Blizzard zh-TW terminology.
 Westmarch,衛斯馬屈,place,approved,chunk-0001,Official Blizzard zh-TW terminology.
 Kehjistan,卡基斯坦,place,approved,chunk-0001,Official Blizzard zh-TW terminology.
 Vizjerei,費斯傑利,organization,approved,chunk-0001,Current official Blizzard zh-TW terminology.
-the Wanderer,黑暗流浪者,title,approved,chunk-0001,Use established Diablo designation where the source refers to the champion carrying Diablo.
 Bartuc,霸圖克,character,approved,chunk-0002,Current official Blizzard zh-TW terminology.
 Horazon,赫拉森,character,approved,chunk-0002,Current official Blizzard zh-TW terminology.
 Warlord of Blood,鮮血魔將,title,approved,chunk-0002,Preserves the martial-demonic epithet and aligns with current official descriptions of 霸圖克 as a 費斯傑利魔將.
 Kosoraq,科索拉克,incantation,approved,chunk-0003,Novel-specific magical word; use phonetic rendering consistently.
 Aranoch,亞拉挪奇,place,approved,chunk-0005,Official Traditional Chinese form attested in Diablo III localization data.
 Twin Seas,雙子海,place,approved,chunk-0006,Transparent geographic name; retain consistently.
+Rathma,拉斯瑪,character,approved,chunk-0009,Official Blizzard zh-TW terminology.
+necromancer,死靈法師,class,approved,chunk-0009,Official Blizzard zh-TW terminology.
+Jezrat,傑茲拉特,incantation,approved,chunk-0009,Novel-specific demonic command; use phonetic rendering consistently.
+Iskari,伊斯卡里,incantation,approved,chunk-0009,Novel-specific demonic command; use phonetic rendering consistently.
+Woyut,沃尤特,incantation,approved,chunk-0009,Novel-specific demonic command; use phonetic rendering consistently.
+Gester,傑斯特,incantation,approved,chunk-0009,Novel-specific demonic command; use phonetic rendering consistently.
+Dovru Sesti,多弗魯‧塞斯提,incantation,approved,chunk-0009,Novel-specific two-word demonic command; retain the internal word boundary with a middle dot.
+Verash,維拉什,incantation,approved,chunk-0009,Novel-specific demonic command; use phonetic rendering consistently.
+Scosglen,斯科斯格倫,place,approved,chunk-0010,Official Blizzard zh-TW terminology.
+Sand Maggot,沙蟲,creature,approved,chunk-0011,Established Traditional Chinese Diablo II monster name.
+Lut Gholein,魯高因,place,approved,chunk-0012,Current official Blizzard zh-TW terminology.
+Heyat tokaris,海亞特‧托卡里斯,incantation,approved,chunk-0012,Novel-specific demonic phrase; phonetic rendering.
+Heyat grendel,海亞特‧格倫德爾,incantation,approved,chunk-0012,Novel-specific demonic phrase; phonetic rendering.
+Heskar,赫斯卡,incantation,approved,chunk-0012,Novel-specific demonic command; phonetic rendering.
+Nestu veraki,內斯圖‧維拉基,incantation,approved,chunk-0012,Novel-specific ritual phrase; phonetic rendering.
+Nestu verakuu,內斯圖‧維拉庫,incantation,approved,chunk-0012,Novel-specific ritual phrase; phonetic rendering.
+Nestu hanti,內斯圖‧漢提,incantation,approved,chunk-0012,Novel-specific ritual phrase; phonetic rendering.
+Nestu hantiri,內斯圖‧漢提里,incantation,approved,chunk-0012,Novel-specific ritual phrase; phonetic rendering.
+Belial,彼列,character,approved,chunk-0013,Official Blizzard zh-TW terminology.
+Azmodan,阿茲莫丹,character,approved,chunk-0013,Official Blizzard zh-TW terminology.
+Mephisto,墨菲斯托,character,approved,chunk-0013,Official Blizzard zh-TW terminology.
+Prime Evils,三大罪惡之源,collective,approved,chunk-0013,Official Blizzard zh-TW collective title for Diablo Mephisto and Baal.
+Kingsport,列王港,place,approved,chunk-0014,Semantic rendering attested in Traditional Chinese Diablo lore references; no current official Taiwan form found.
+Napolys,納波利斯號,vessel,approved,chunk-0014,Novel-specific ship name; phonetic rendering with vessel suffix.
+Hawksfire,鷹火號,vessel,approved,chunk-0014,Novel-specific ship name; semantic rendering with vessel suffix.
+Odyssey,奧德賽號,vessel,approved,chunk-0014,Established rendering of the classical name with vessel suffix.
+draclin,德拉克林,currency,approved,chunk-0015,Novel-specific currency; phonetic rendering.
+Gea Kul,吉庫爾,place,approved,chunk-0015,Current official Blizzard zh-TW terminology.
+The Captain's Table,船長餐桌,place,approved,chunk-0015,Novel-specific inn name; semantic rendering.
+Kesra,凱斯拉,incantation,approved,chunk-0018,Novel-specific demonic command; phonetic rendering.
+Qezal irakus,凱札爾‧伊拉庫斯,incantation,approved,chunk-0018,Novel-specific demonic phrase; phonetic rendering.
+Qezal ranakka,凱札爾‧拉納卡,incantation,approved,chunk-0018,Novel-specific demonic phrase; phonetic rendering.
+King's Shield,國王之盾號,vessel,approved,chunk-0019,Novel-specific ship name; semantic rendering with vessel suffix.
+Dreamer,夢者,creature,approved,chunk-0022,Novel-specific extradimensional being defined by its forced sleep and dream sight; concise semantic rendering.
+Viz-jun,威茲君,place,approved,chunk-0028,Traditional Chinese rendering attested in an official Diablo III town introduction published through Blizzard's Taiwan site and archived by Bahamut.
+Trag'Oul,塔格奧,character,approved,chunk-0031,Current official Blizzard zh-TW terminology for the dragon guardian and teacher associated with Rathma.
+Atma,亞特瑪,character,approved,chunk-0031,Established Traditional Chinese Diablo II localization form.
+Meshif,馬席夫,character,approved,chunk-0031,Established Traditional Chinese Diablo II localization form.
+Ensteig,恩斯汀格,place,approved,chunk-0032,Established Traditional Chinese lore transliteration; no current Blizzard zh-TW page naming the place was found.
+Khanduras,坎德拉斯,place,approved,chunk-0032,Current official Blizzard zh-TW terminology.
+Jerhyn,傑恩,character,approved,chunk-0032,Current official Diablo II Resurrected Traditional Chinese localization form; supersedes older 杰海因.
+Zakarum,撒卡蘭姆,organization,approved,chunk-0032,Official Blizzard zh-TW terminology.
+Miram,米拉姆,character,approved,chunk-0032,Novel-specific tavern server; Taiwan-style phonetic rendering.
+Aragos Theater,阿拉戈斯劇院,place,approved,chunk-0032,Novel-specific Lut Gholein landmark; phonetic proper name plus semantic descriptor.
+Cathedral of Tomas the Repentant,悔罪者托瑪斯大教堂,place,approved,chunk-0032,Novel-specific religious site; semantic epithet with Taiwan-style name transliteration.
+Great Sandstorm,大沙暴,event,approved,chunk-0033,Novel-specific historical event; concise semantic rendering.
+Lut Gholein's Guard,魯高因衛隊,organization,approved,chunk-0033,Novel-specific formal city guard name; retain consistently.
+Drognan,卓格南,character,approved,chunk-0035,Current official Diablo II Resurrected Traditional Chinese localization form.
+Furiosic,弗里歐西克,incantation,approved,chunk-0036,Novel-specific magical command; Taiwan-style phonetic rendering.
+Arcane Sanctuary,秘法聖殿,place,approved,chunk-0036,Current official Blizzard zh-TW terminology.
+scarab demons,惡魔甲蟲,creature,approved,chunk-0037,Aligned with the established Diablo II Resurrected Traditional Chinese Scarab monster form.
+King of the Depths,深淵之王,title,approved,chunk-0039,Novel-specific maritime oath or divine title; concise dark-fantasy rendering.
+Attis Zuun,阿提斯‧祖恩,character,approved,chunk-0040,Novel-specific historical Vizjerei; Taiwan-style phonetic rendering.
+Korbia,柯比亞,character,approved,chunk-0040,Novel-specific historical Vizjerei acolyte; Taiwan-style phonetic rendering.
+Merendi,梅倫迪,character,approved,chunk-0040,Novel-specific historical Vizjerei council leader; Taiwan-style phonetic rendering.
+Jeslyn Kataro,潔絲琳‧卡塔羅,character,approved,chunk-0040,Novel-specific historical friend of Bartuc; Taiwan-style phonetic rendering.
+Shazari,沙札里,incantation,approved,chunk-0040,Novel-specific ritual word; phonetic rendering.
+Shazari Tomei,沙札里‧托梅,incantation,approved,chunk-0040,Novel-specific ritual phrase; phonetic rendering with internal word boundary.
+Shazari Saruphi,沙札里‧薩魯菲,incantation,approved,chunk-0041,Novel-specific ritual phrase; phonetic rendering with internal word boundary.
+Shazari Giovox,沙札里‧吉歐沃克斯,incantation,approved,chunk-0041,Novel-specific ritual phrase; phonetic rendering with internal word boundary.
+leaper,跳躍者,creature,approved,chunk-0041,Best-supported Taiwan rendering for the Diablo desert creature; no directly naming current Blizzard zh-TW page was found.
+Hesia,赫西亞,character,approved,chunk-0043,Novel-specific merchant-family daughter; Taiwan-style phonetic rendering.
+Rhubin,魯賓,character,approved,chunk-0043,Novel-specific merchant father; Taiwan-style phonetic rendering.
+Jamili,賈米莉,character,approved,chunk-0043,Novel-specific merchant mother; Taiwan-style phonetic rendering.
+Den'Trag,丹‧塔格,incantation,approved,chunk-0044,Novel-specific necromantic spell name; phonetic rendering.
+Teeth of the Dragon Trag'Oul,巨龍塔格奧之牙,spell,approved,chunk-0044,Novel-specific expansion of Den'Trag; semantic rendering preserving official 塔格奧.
+Verikos,維里科斯,incantation,approved,chunk-0044,Novel-specific guardian command; phonetic rendering.
+Dianysi,迪亞尼西,incantation,approved,chunk-0044,Novel-specific guardian command; phonetic rendering.
+Zako,扎科,character,approved,chunk-0047,Novel-specific Malevolyn officer; Taiwan-style phonetic rendering.
+Captain Lyconius,萊科尼烏斯隊長,character,approved,chunk-0047,Novel-specific Malevolyn captain; Taiwan-style phonetic rendering with title.
+Kosori nimth,科索里‧尼姆斯,incantation,approved,chunk-0023,Novel-specific demonic phrase; phonetic rendering.
+Lazarai,拉札萊,incantation,approved,chunk-0023,Novel-specific demonic command; phonetic rendering.
+Lazarai dekadas,拉札萊‧德卡達斯,incantation,approved,chunk-0023,Novel-specific demonic phrase; phonetic rendering.
+Dekadas,德卡達斯,incantation,approved,chunk-0023,Novel-specific demonic command; phonetic rendering.
+Nezarios Aero,內札里奧斯‧艾羅,incantation,approved,chunk-0054,Novel-specific transport incantation; phonetic rendering.
+Aerona Jy,艾羅娜‧傑伊,incantation,approved,chunk-0054,Novel-specific transport incantation; phonetic rendering.
+Oskul,奧斯庫爾,character,approved,chunk-0054,Novel-specific Vizjerei mage; Taiwan-style phonetic rendering.
+Greikos Dominius est Buar,格雷科斯‧多米尼烏斯‧埃斯特‧布阿爾,incantation,approved,chunk-0056,Novel-specific Arcane Sanctuary incantation; phonetic rendering.
+Greiko Dominius Mortu,格雷科‧多米尼烏斯‧莫圖,incantation,approved,chunk-0056,Novel-specific Arcane Sanctuary incantation; phonetic rendering.
+Mortias Diablum,莫提亞斯‧迪亞布魯姆,incantation,approved,chunk-0066,Novel-specific reversal incantation used to banish Malevolyn's demons; phonetic rendering.

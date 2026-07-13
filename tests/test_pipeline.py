@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from translation_pipeline.cli import (
+    is_chapter_heading,
     make_chunks,
     normalize_page_text,
     page_text_from_positioned_lines,
@@ -79,6 +80,11 @@ class PipelineTests(unittest.TestCase):
 
     def test_word_count_handles_apostrophes(self):
         self.assertEqual(word_count("It's the author's book."), 4)
+
+    def test_generic_chapter_headings(self):
+        for value in ("Chapter 1", "CHAPTER XII", "Part Two", "Prologue", "Thirty-One"):
+            self.assertTrue(is_chapter_heading(value), value)
+        self.assertFalse(is_chapter_heading("He entered chapter one of his life."))
 
 
 if __name__ == "__main__":

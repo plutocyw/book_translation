@@ -1,25 +1,12 @@
 # Traditional Chinese book translation pipeline
 
-This repository turns a text-based or scanned PDF into resumable, paragraph-aware translation chunks, maintains a persistent terminology register, routes work to different model tiers, reviews only what needs review, and assembles the approved Traditional Chinese text.
+This repository turns a PDF into a publication-quality Traditional Chinese (`zh-Hant-TW`) translation. It supports Codex with parallel subagents and a fully unattended OpenAI API mode. Both engines share the same durable task graph, provenance checks, ordered finalizer, formal quality gate, and resumable Notion sync.
 
-The source PDF and generated book contents remain untracked by Git.
+Copyrighted PDFs, generated book text, API checkpoints, and SQLite run state are kept out of Git.
 
-## Model routing
+## Start a book
 
-The defaults in `project.json` deliberately do not use the most expensive model everywhere:
-
-| Role | Default | Why |
-|---|---|---|
-| Terminology discovery | `gpt-5.6-luna` | High-volume extraction with human approval before use |
-| Draft translation | `gpt-5.6-terra` | Quality/cost balance for the prose itself |
-| Bilingual review | `gpt-5.6-terra` | Strong source-target comparison without paying top tier for every chunk |
-| Difficult adjudication | `gpt-5.6-sol` | Used only when review returns `escalate` |
-
-Model IDs, reasoning effort, maximum output, and pricing assumptions are configuration rather than code. Change them in `project.json` if your account has different model access or after an evaluation pilot.
-
-## Setup
-
-Use Python 3.9 or newer:
+Install the project with Python 3.9 or newer:
 
 ```bash
 python3 -m venv .venv
@@ -28,98 +15,120 @@ python3 -m pip install -e .
 book-translate doctor
 ```
 
-Model-backed commands require an API key in the environment:
+Create an isolated workspace and start the run:
+
+```bash
+book-translate init /path/to/book.pdf --project-dir books/my-book
+book-translate --config books/my-book/project.json run --engine codex --jobs 3
+```
+
+When this command is run as part of a Codex task, the repository's `AGENTS.md` operating contract makes Codex keep up to three subagents on independent work, replace completed workers with newly ready work, and preserve all progress in SQLite. The shell command alone cannot create Codex UI agents; it creates the durable queue that the active Codex task consumes.
+
+To run unattended through the API instead:
 
 ```bash
 export OPENAI_API_KEY="..."
+book-translate --config books/my-book/project.json run --engine api --jobs 3
 ```
 
-Local inspection, OCR, extraction, chunking, estimation, assembly, and deterministic QA do not send content to a model.
+Codex mode does not require an API key. API mode does because it calls the Responses API outside the Codex app.
 
-### Codex-driven translation (no API key)
-
-When Codex is the translation engine, the repository does not need an API key. Prepare self-contained work packets after extraction and chunking:
+Resume after interruption or a quota reset, without repeating successful work:
 
 ```bash
-book-translate prepare --start 1 --limit 2
+book-translate --config books/my-book/project.json status --tasks
+book-translate --config books/my-book/project.json resume
 ```
 
-Codex reads `build/packets/*.translation.md`, writes the translations to `output/chunks/*.zh-Hant.md`, and can then review them directly. The `translate` and model-backed `review` commands remain available only for unattended API-based operation.
+The current run is stored under `.book-translate/runs/<run-id>/`. Its immutable manifest fingerprints the source, config, prompts, and user-maintained references. Its SQLite queue records dependencies, leases, retries, hashes, model roles, token use, failures, and stale downstream work.
 
-## First run
+## Pipeline and parallelization
 
-1. Place the PDF at `input/book.pdf` or change `source_pdf` in `project.json`.
-   Use `source_page_start` and `source_page_end` to restrict extraction to the narrative body when the PDF contains front or back matter.
-2. Fill in `context/project_brief.md` and `context/style_guide.md`.
-3. Inspect and extract:
+```text
+inspect → extract → chunk → metadata + online verification
+                            ↓
+          terminology scans (parallel, ≤3)
+                            ↓
+                terminology consolidation
+                            ↓
+             draft translations (parallel, ≤3)
+                            ↓
+             bilingual reviews (parallel, ≤3)
+                            ↓
+          continuity finalizer (strict source order)
+                            ↓
+               assemble → formal QA → Notion
+```
+
+Drafting and bilingual review use immutable, compact packets containing only the chunk, neighbouring source tails, matching approved terminology, style/brief snapshot, and continuity memory. They do not resend the entire book. Finalization is deliberately sequential: chunk N consumes the finalized tail of chunk N−1, which prevents parallel workers from introducing unresolved voice and transition drift.
+
+The default concurrency ceiling is three. More agents can reduce wall-clock time, but usually duplicate enough context and coordination tokens that they are less efficient without measured evidence.
+
+## Model routing
+
+The defaults are configuration, not hard-coded policy:
+
+| Role | Default model | Reasoning | Use |
+|---|---|---:|---|
+| Metadata and one online verification pass | `gpt-5.6-luna` | low | Title, author, genre, audience, edition |
+| Terminology discovery | `gpt-5.6-luna` | low | High-volume candidate extraction |
+| Terminology consolidation | `gpt-5.6-sol` | medium | One global conflict-resolution pass |
+| Draft translation | `gpt-5.6-terra` | low | Main quality/cost balance |
+| Bilingual review | `gpt-5.6-terra` | medium | Source-target fidelity checks |
+| Ordered continuity finalizer | `gpt-5.6-terra` | medium | Applies review and cross-chunk continuity |
+| Consequential ambiguity | `gpt-5.6-sol` | high | Only review cases marked `escalate` |
+| Final book audit, when enabled | `gpt-5.6-sol` | high | Selective release-level escalation |
+
+Subagents do consume additional tokens because each needs instructions and local context. The pipeline limits that overhead with compact packets, consecutive chunk grouping, a three-worker ceiling, content-derived cache keys, and selective use of the strongest model. Parallelization primarily saves elapsed time; these controls keep its token premium bounded.
+
+## Completion and invalidation rules
+
+The formal release gate validates:
+
+- exact source, translation, review, and finalizer hashes;
+- current review provenance and acceptable verdicts;
+- omissions via paragraph and chapter-heading structure;
+- Simplified Chinese, English residue, placeholders, broken punctuation, and Markdown emphasis;
+- every approved glossary form used in relevant chunks;
+- exact assembly marker order and byte-for-byte chosen chunk content.
+
+Paragraph-count exceptions must identify the chunk, expected counts, delta, and reason in `project.json`. A source, config, prompt, reference, or model change invalidates its stage and all downstream stages. Notion cannot run until assembly and formal QA succeed.
+
+The individual diagnostic commands remain available when needed:
 
 ```bash
 book-translate inspect
+book-translate ocr        # only when the PDF is scanned
 book-translate extract
 book-translate chunk
 book-translate estimate
-```
-
-If inspection reports that most pages have little text, OCR first:
-
-```bash
-book-translate ocr
-```
-
-Then point `source_pdf` at `build/ocr/book.ocr.pdf` and repeat inspection/extraction.
-
-4. Run the terminology pass, review the CSVs, and change accepted entries from `provisional` to `approved`:
-
-```bash
 book-translate terms
-```
-
-5. Translate and review a small pilot before the whole book:
-
-```bash
-book-translate translate --start 1 --limit 2
-book-translate review --start 1 --limit 2 --escalate
-```
-
-Review these files:
-
-- `output/chunks/*.zh-Hant.md`
-- `output/reviews/*.review.json`
-- `context/glossary.csv`
-- `context/characters.csv`
-
-Adjust the style guide, glossary, and model routing after the pilot. Because cache keys include prompts and relevant references, affected chunks will be regenerated while unchanged work remains cached.
-
-6. Translate production batches and assemble:
-
-```bash
-book-translate translate --start 3 --end 20
-book-translate review --start 3 --end 20 --escalate
+book-translate translate --jobs 3
+book-translate review --jobs 3 --escalate
 book-translate assemble
 book-translate qa
 ```
 
-QA also accepts `--start`, `--end`, and `--limit`, which is useful for validating a Codex pilot before the rest of the book is translated.
+## Notion library sync
 
-Reviewed rewrites are stored separately as `*.reviewed.zh-Hant.md`. Add `--apply` to the review command only when you want a complete reviewed passage copied over the draft. Assembly prefers the reviewed version when present.
+Add `--notion` to `run` to make Notion the terminal task, or run it separately after QA:
 
-## Cost and consistency controls
+```bash
+python3 -m translation_pipeline.notion_sync plan --root books/my-book
+python3 -m translation_pipeline.notion_sync sync \
+  --root books/my-book \
+  --env-file /path/to/.env \
+  --parent-title "Book Translation"
+```
 
-- Each model result has a content-derived cache key and usage metadata.
-- Only glossary and character entries found in the current source chunk are included in its prompt.
-- Only the tail of the previous translation and a compact continuity-memory tail are repeated.
-- The strongest model receives only material escalations.
-- `--start`, `--end`, and `--limit` make every model-backed stage resumable.
-- `estimate` gives a conservative translation-only estimate; actual API usage is saved in adjacent metadata files.
+The integration creates or reuses a `Books` database, upserts by a stable Book ID, and preserves an existing Read Status unless explicitly changed. Uploads are checkpointed in 100-block batches and verified by remote readback. Safe replacement deletes only verified pipeline-owned blocks, preserves manual blocks, and refuses ambiguous legacy content.
 
-Update `context/chapter_memory.md` at chapter boundaries. Keep it compact: continuity facts and unresolved references, not chapter retellings.
-
-## PDF output
-
-`output/book.zh-Hant.md` is the canonical assembled text. Keep the editable source canonical until linguistic review is complete; typeset and render the final PDF afterward, then visually inspect every page for broken glyphs, clipping, headers, footers, notes, and page transitions.
+For an existing unmarked import, first run the new `sync` without `--replace-content`. That readback adopts the old body only if every block matches. A later changed translation may then use `--replace-content` safely.
 
 ## Tests
 
 ```bash
 python3 -m unittest discover -s tests -v
+python3 -m py_compile translation_pipeline/*.py
+git diff --check
 ```

@@ -15,8 +15,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
+from .workers import (
+    bounded_parallel_map,
+    immutable_translation_input,
+    make_context_snapshot,
+    save_context_snapshot,
+)
+from .project import initialize_project, slugify
+
 
 ROOT = Path.cwd()
+PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CONFIG = ROOT / "project.json"
 
 BOILERPLATE_LINES = {
@@ -50,6 +59,30 @@ CHAPTER_HEADINGS = {
     "About The Author",
 }
 
+NUMBER_WORD_HEADINGS = {
+    "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
+    "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen",
+    "Eighteen", "Nineteen", "Twenty", "Twenty-One", "Twenty-Two", "Twenty-Three",
+    "Twenty-Four", "Twenty-Five", "Twenty-Six", "Twenty-Seven", "Twenty-Eight",
+    "Twenty-Nine", "Thirty", "Thirty-One", "Thirty-Two", "Thirty-Three", "Thirty-Four",
+    "Thirty-Five", "Thirty-Six", "Thirty-Seven", "Thirty-Eight", "Thirty-Nine", "Forty",
+    "Forty-One", "Forty-Two", "Forty-Three", "Forty-Four", "Forty-Five", "Forty-Six",
+    "Forty-Seven", "Forty-Eight", "Forty-Nine", "Fifty",
+}
+
+STOP_HEADINGS = {
+    "About the Author",
+    "About The Author",
+    "About the Authors",
+    "About The Authors",
+    "Acknowledgments",
+    "Acknowledgements",
+    "Also by the Author",
+    "Also By the Author",
+    "Bibliography",
+    "Index",
+}
+
 SOURCE_TEXT_REPLACEMENTS = {
     "naÔvetÈ": "naïveté",
     "socalled": "so-called",
@@ -60,6 +93,23 @@ SOURCE_TEXT_REPLACEMENTS = {
 
 class PipelineError(RuntimeError):
     pass
+
+
+def is_chapter_heading(value: str) -> bool:
+    text = value.strip()
+    if text in CHAPTER_HEADINGS or text in NUMBER_WORD_HEADINGS:
+        return True
+    if text.casefold() in {"prologue", "epilogue", "foreword", "afterword", "introduction"}:
+        return True
+    if re.fullmatch(r"(?i)(?:chapter|part|book)\s+(?:\d+|[ivxlcdm]+|[a-z][a-z -]{0,30})", text):
+        return True
+    if re.fullmatch(r"(?:\d{1,3}|[IVXLCDM]{1,10})", text):
+        return True
+    return False
+
+
+def is_stop_heading(value: str) -> bool:
+    return value.strip() in STOP_HEADINGS
 
 
 def read_text(path: Path) -> str:
@@ -177,15 +227,15 @@ def page_text_from_positioned_lines(lines: Sequence[Dict[str, Any]]) -> Tuple[st
         return "", False
 
     first = content[0]
-    continues_from_previous = first["text"] not in CHAPTER_HEADINGS and first["x0"] < 92.0
+    continues_from_previous = not is_chapter_heading(first["text"]) and first["x0"] < 92.0
     blocks: List[List[str]] = []
     current: List[str] = []
     previous: Optional[Dict[str, Any]] = None
 
     for item in content:
         text = item["text"]
-        is_heading = text in CHAPTER_HEADINGS
-        previous_is_heading = bool(previous and previous["text"] in CHAPTER_HEADINGS)
+        is_heading = is_chapter_heading(text)
+        previous_is_heading = bool(previous and is_chapter_heading(previous["text"]))
         vertical_gap = item["top"] - previous["top"] if previous else 0
         begins_paragraph = (
             not current
@@ -242,6 +292,7 @@ class Paragraph:
 
 def make_chunks(pages: Sequence[Dict[str, Any]], target: int, maximum: int) -> List[Dict[str, Any]]:
     paragraphs: List[Paragraph] = []
+    reached_stop_heading = False
     for page in pages:
         page_number = int(page["page"])
         blocks = [block.strip() for block in re.split(r"\n\s*\n", page["text"]) if block.strip()]
@@ -253,7 +304,12 @@ def make_chunks(pages: Sequence[Dict[str, Any]], target: int, maximum: int) -> L
             block = block.strip()
             if not block:
                 continue
+            if is_stop_heading(block):
+                reached_stop_heading = True
+                break
             paragraphs.append(Paragraph(page_number, page_number, block))
+        if reached_stop_heading:
+            break
 
     units: List[Paragraph] = []
     for paragraph in paragraphs:
@@ -288,7 +344,7 @@ def make_chunks(pages: Sequence[Dict[str, Any]], target: int, maximum: int) -> L
     for paragraph in paragraphs:
         wc = word_count(paragraph.text)
         if current and (
-            paragraph.text in CHAPTER_HEADINGS
+            is_chapter_heading(paragraph.text)
             or current_words + wc > maximum
             or current_words >= target
         ):
@@ -324,7 +380,7 @@ def relevant_reference(source: str) -> str:
     lines: List[str] = []
     for row in read_csv_rows(ROOT / "context" / "glossary.csv"):
         term = (row.get("source_term") or "").strip()
-        if term and term.casefold() in source_folded:
+        if row.get("status") == "approved" and term and term.casefold() in source_folded:
             lines.append(
                 f"- {term} -> {row.get('target_term','')} "
                 f"[{row.get('category','')}; {row.get('status','')}] {row.get('notes','')}"
@@ -332,12 +388,41 @@ def relevant_reference(source: str) -> str:
     for row in read_csv_rows(ROOT / "context" / "characters.csv"):
         name = (row.get("source_name") or "").strip()
         aliases = [x.strip() for x in (row.get("aliases") or "").split("|") if x.strip()]
-        if name and any(candidate.casefold() in source_folded for candidate in [name] + aliases):
+        if (
+            row.get("status") == "approved"
+            and name
+            and any(candidate.casefold() in source_folded for candidate in [name] + aliases)
+        ):
             lines.append(
                 f"- {name} -> {row.get('target_name','')} "
                 f"[aliases: {row.get('aliases','')}; status: {row.get('status','')}] {row.get('notes','')}"
             )
+    generated_path = ROOT / "context" / "approved_terminology.json"
+    if generated_path.exists():
+        generated = load_json(generated_path)
+        for item in generated.get("terms", []):
+            term = str(item.get("source_term", "")).strip()
+            if term and term.casefold() in source_folded:
+                lines.append(f"- {term} -> {item.get('target_term', '')} [{item.get('category', '')}] {item.get('notes', '')}")
+        for item in generated.get("characters", []):
+            name = str(item.get("source_name", "")).strip()
+            aliases = [value.strip() for value in str(item.get("aliases", "")).split("|") if value.strip()]
+            if name and any(value.casefold() in source_folded for value in [name] + aliases):
+                lines.append(f"- {name} -> {item.get('target_name', '')} [aliases: {item.get('aliases', '')}] {item.get('notes', '')}")
     return "\n".join(lines) if lines else "(No matching registered terms.)"
+
+
+def approved_reference_snapshot() -> str:
+    """Return the stable approved registry used to hash parallel context packets."""
+    lines: List[str] = []
+    for path in (ROOT / "context" / "glossary.csv", ROOT / "context" / "characters.csv"):
+        for row in read_csv_rows(path):
+            if row.get("status") == "approved":
+                lines.append(json.dumps(row, ensure_ascii=False, sort_keys=True))
+    generated_path = ROOT / "context" / "approved_terminology.json"
+    if generated_path.exists():
+        lines.append(json.dumps(load_json(generated_path), ensure_ascii=False, sort_keys=True))
+    return "\n".join(lines)
 
 
 def parse_json_response(text: str) -> Dict[str, Any]:
@@ -360,7 +445,14 @@ def parse_json_response(text: str) -> Dict[str, Any]:
     return parsed
 
 
-def call_model(cfg: Dict[str, Any], role: str, instructions: str, user_input: str) -> Tuple[str, Dict[str, Any]]:
+def call_model(
+    cfg: Dict[str, Any],
+    role: str,
+    instructions: str,
+    user_input: str,
+    *,
+    tools: Optional[List[Dict[str, Any]]] = None,
+) -> Tuple[str, Dict[str, Any]]:
     if not os.environ.get("OPENAI_API_KEY"):
         raise PipelineError("OPENAI_API_KEY is not set; local extraction and chunking do not require it")
     try:
@@ -378,6 +470,8 @@ def call_model(cfg: Dict[str, Any], role: str, instructions: str, user_input: st
     effort = cfg.get("reasoning_effort", {}).get(role)
     if effort:
         kwargs["reasoning"] = {"effort": effort}
+    if tools:
+        kwargs["tools"] = tools
     response = OpenAI().responses.create(**kwargs)
     usage = getattr(response, "usage", None)
     usage_data = usage.model_dump() if hasattr(usage, "model_dump") else {}
@@ -437,6 +531,123 @@ def cmd_doctor(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
         checks["pdfplumber"] = "missing"
     for key, value in checks.items():
         print(f"{key:16} {value}")
+
+
+def cmd_init(args: argparse.Namespace) -> None:
+    source = Path(args.source).expanduser().resolve()
+    project_dir = (
+        Path(args.project_dir).expanduser().resolve()
+        if args.project_dir
+        else (Path.cwd() / "books" / slugify(source.stem)).resolve()
+    )
+    config = initialize_project(source, project_dir, PACKAGE_ROOT, force=args.force)
+    print(f"Initialized book project: {project_dir}")
+    print(f"Config: {config}")
+    print(f"Next: book-translate --config {config} run --engine {args.engine}")
+
+
+def cmd_run(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
+    from .runner import codex_ready_packets, create_pipeline_run, execute_api_run, prepare_sources
+
+    jobs = max(1, int(args.jobs or cfg.get("worker_jobs", 3)))
+    prepare_sources(ROOT, cfg, force=args.force_prepare)
+    run = create_pipeline_run(
+        ROOT,
+        cfg,
+        engine=args.engine,
+        jobs=jobs,
+        run_id=args.run_id,
+        notion=args.notion,
+    )
+    print(f"Created run {run.run_id} with {run.status()['total_tasks']} durable tasks.")
+    if args.engine == "api":
+        status = execute_api_run(ROOT, cfg, run)
+        print(json.dumps(status, ensure_ascii=False, indent=2))
+        if status["by_state"]["blocked"] or status["by_state"]["pending"]:
+            raise PipelineError("Run stopped before completion; inspect `book-translate status`.")
+    else:
+        packet_manifest = codex_ready_packets(ROOT, run)
+        print(f"Codex queue ready: {packet_manifest}")
+        print("Codex should keep up to three translation/review workers active and reserve finalization for ordered work.")
+
+
+def cmd_resume(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
+    from .runner import codex_ready_packets, current_run, execute_api_run
+
+    try:
+        run = current_run(ROOT, args.run_id)
+    except (FileNotFoundError, ValueError) as exc:
+        raise PipelineError(str(exc)) from exc
+    drift = run.verify_manifest_inputs()
+    if drift and not args.allow_input_drift:
+        raise PipelineError(
+            "Immutable run inputs changed; start a new run or pass --allow-input-drift after reviewing status."
+        )
+    if run.manifest["engine"] == "api":
+        status = execute_api_run(ROOT, cfg, run)
+        print(json.dumps(status, ensure_ascii=False, indent=2))
+    else:
+        packet_manifest = codex_ready_packets(ROOT, run)
+        print(f"Refreshed Codex-ready queue: {packet_manifest}")
+        print(json.dumps(run.status(), ensure_ascii=False, indent=2))
+
+
+def cmd_status(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
+    from .runner import current_run
+
+    try:
+        run = current_run(ROOT, args.run_id)
+    except (FileNotFoundError, ValueError) as exc:
+        raise PipelineError(str(exc)) from exc
+    status = run.status()
+    if args.tasks:
+        status["tasks"] = [
+            {
+                "task_id": task["task_id"],
+                "stage": task["stage"],
+                "state": task["state"],
+                "attempt": task["attempt"],
+                "error": task["error"],
+            }
+            for task in run.tasks()
+        ]
+    print(json.dumps(status, ensure_ascii=False, indent=2))
+
+
+def cmd_work_claim(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
+    from .runner import claim_codex_task, current_run
+
+    try:
+        run = current_run(ROOT, args.run_id)
+        descriptor = claim_codex_task(ROOT, run, args.worker)
+    except Exception as exc:
+        raise PipelineError(str(exc)) from exc
+    print(json.dumps(descriptor or {"status": "no_ready_task"}, ensure_ascii=False, indent=2))
+
+
+def cmd_work_complete(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
+    from .runner import complete_codex_task, current_run
+
+    try:
+        run = current_run(ROOT, args.run_id)
+        output = complete_codex_task(ROOT, run, args.task_id, args.worker)
+    except Exception as exc:
+        raise PipelineError(str(exc)) from exc
+    print(f"completed {args.task_id} -> {output}")
+
+
+def cmd_work_fail(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
+    from .runner import current_run
+
+    try:
+        run = current_run(ROOT, args.run_id)
+        state = run.fail(args.task_id, args.worker, args.error, retryable=not args.block)
+        if state == "retryable_failed":
+            run.retry(args.task_id)
+            state = "ready"
+    except Exception as exc:
+        raise PipelineError(str(exc)) from exc
+    print(json.dumps({"task_id": args.task_id, "state": state}, ensure_ascii=False))
 
 
 def pdf_stats(pdf: Path) -> Dict[str, Any]:
@@ -646,8 +857,13 @@ def previous_translation(index: int, chars: int) -> str:
 def translation_input(cfg: Dict[str, Any], chunk: Dict[str, Any]) -> str:
     memory = read_text(ROOT / "context" / "chapter_memory.md")
     memory = memory[-int(cfg.get("chapter_memory_chars", 3500)) :]
+    metadata_path = ROOT / "context" / "book_metadata.json"
+    book_metadata = read_text(metadata_path) if metadata_path.exists() else "(No inferred metadata yet.)"
     return textwrap.dedent(
         f"""
+        VERIFIED BOOK METADATA
+        {book_metadata}
+
         PROJECT BRIEF
         {read_text(ROOT / 'context' / 'project_brief.md')}
 
@@ -673,15 +889,40 @@ def cmd_translate(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
     out_dir = ROOT / "output" / "chunks"
     out_dir.mkdir(parents=True, exist_ok=True)
     instructions = prompt("translate")
-    for chunk in selected_chunks(args):
-        user_input = translation_input(cfg, chunk)
+    selected = selected_chunks(args)
+    jobs = max(1, int(getattr(args, "jobs", 1) or 1))
+    all_chunks = list(iter_jsonl(ROOT / "build" / "chunks.jsonl"))
+    positions = {chunk["chunk_id"]: index for index, chunk in enumerate(all_chunks)}
+    snapshot = None
+    if jobs > 1:
+        snapshot = make_context_snapshot(
+            ROOT,
+            prompt_text=instructions,
+            reference_text=approved_reference_snapshot(),
+            memory_chars=int(cfg.get("chapter_memory_chars", 3500)),
+        )
+        snapshot_path = save_context_snapshot(ROOT, snapshot)
+        print(f"parallel context snapshot: {snapshot.snapshot_id} ({snapshot_path})")
+
+    def translate_one(chunk: Dict[str, Any]) -> str:
+        if snapshot is None:
+            user_input = translation_input(cfg, chunk)
+            snapshot_id = None
+        else:
+            user_input = immutable_translation_input(
+                snapshot,
+                all_chunks,
+                positions[chunk["chunk_id"]],
+                relevant_reference(chunk["source"]),
+                neighbor_chars=int(cfg.get("source_neighbor_chars", 900)),
+            )
+            snapshot_id = snapshot.snapshot_id
         model = cfg["models"]["translate"]
         input_hash = sha256_text(model, instructions, user_input)
         output_path = out_dir / f"{chunk['chunk_id']}.zh-Hant.md"
         meta_path = out_dir / f"{chunk['chunk_id']}.meta.json"
         if output_path.exists() and cache_hit(meta_path, input_hash, args.force):
-            print(f"skip {chunk['chunk_id']} (cached)")
-            continue
+            return f"skip {chunk['chunk_id']} (cached)"
         translated, metadata = call_model(cfg, "translate", instructions, user_input)
         translated = translated.strip() + "\n"
         write_text(output_path, translated)
@@ -692,18 +933,41 @@ def cmd_translate(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
                 "source_sha256": chunk["source_sha256"],
                 "translation_sha256": sha256_text(translated),
                 "input_hash": input_hash,
+                "context_snapshot_id": snapshot_id,
                 **metadata,
             },
         )
-        print(f"translated {chunk['chunk_id']} -> {output_path}")
+        return f"translated {chunk['chunk_id']} -> {output_path}"
+
+    for message in bounded_parallel_map(selected, translate_one, jobs=jobs):
+        print(message)
 
 
 def cmd_prepare(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
     """Write self-contained translation packets for a Codex-driven workflow."""
     out_dir = ROOT / "build" / "packets"
     out_dir.mkdir(parents=True, exist_ok=True)
-    for chunk in selected_chunks(args):
+    selected = selected_chunks(args)
+    all_chunks = list(iter_jsonl(ROOT / "build" / "chunks.jsonl"))
+    positions = {chunk["chunk_id"]: index for index, chunk in enumerate(all_chunks)}
+    instructions = prompt("translate")
+    snapshot = make_context_snapshot(
+        ROOT,
+        prompt_text=instructions,
+        reference_text=approved_reference_snapshot(),
+        memory_chars=int(cfg.get("chapter_memory_chars", 3500)),
+    )
+    snapshot_path = save_context_snapshot(ROOT, snapshot)
+    packet_rows: List[Dict[str, Any]] = []
+    for chunk in selected:
         output_path = ROOT / "output" / "chunks" / f"{chunk['chunk_id']}.zh-Hant.md"
+        immutable_input = immutable_translation_input(
+            snapshot,
+            all_chunks,
+            positions[chunk["chunk_id"]],
+            relevant_reference(chunk["source"]),
+            neighbor_chars=int(cfg.get("source_neighbor_chars", 900)),
+        )
         packet = textwrap.dedent(
             f"""
             # Codex translation packet: {chunk['chunk_id']}
@@ -712,16 +976,38 @@ def cmd_prepare(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
 
             ## Translation instructions
 
-            {prompt('translate')}
+            {instructions}
 
             ## Translation context and source
 
-            {translation_input(cfg, chunk)}
+            {immutable_input}
             """
         ).strip() + "\n"
         packet_path = out_dir / f"{chunk['chunk_id']}.translation.md"
         write_text(packet_path, packet)
+        packet_rows.append(
+            {
+                "chunk_id": chunk["chunk_id"],
+                "index": chunk["index"],
+                "packet": str(packet_path),
+                "output": str(output_path),
+                "source_sha256": chunk["source_sha256"],
+                "context_snapshot_id": snapshot.snapshot_id,
+                "packet_sha256": sha256_text(packet),
+                "status": "ready",
+            }
+        )
         print(f"prepared {chunk['chunk_id']} -> {packet_path}")
+    write_json(
+        out_dir / "manifest.json",
+        {
+            "schema_version": 1,
+            "context_snapshot_id": snapshot.snapshot_id,
+            "context_snapshot": str(snapshot_path),
+            "recommended_subagents": min(3, max(1, len(packet_rows))),
+            "packets": packet_rows,
+        },
+    )
 
 
 def review_input(chunk: Dict[str, Any], translation: str, review_record: Optional[Dict[str, Any]] = None) -> str:
@@ -749,12 +1035,16 @@ def review_input(chunk: Dict[str, Any], translation: str, review_record: Optiona
 def cmd_review(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
     out_dir = ROOT / "output" / "reviews"
     out_dir.mkdir(parents=True, exist_ok=True)
-    for chunk in selected_chunks(args):
+    selected = selected_chunks(args)
+    jobs = max(1, int(getattr(args, "jobs", 1) or 1))
+
+    def review_one(chunk: Dict[str, Any]) -> List[str]:
+        messages: List[str] = []
         translation_path = ROOT / "output" / "chunks" / f"{chunk['chunk_id']}.zh-Hant.md"
         if not translation_path.exists():
-            print(f"skip {chunk['chunk_id']} (not translated)")
-            continue
+            return [f"skip {chunk['chunk_id']} (not translated)"]
         translation = read_text(translation_path)
+        translation_hash = sha256_text(translation)
         instructions = prompt("review")
         user_input = review_input(chunk, translation)
         model = cfg["models"]["review"]
@@ -767,9 +1057,17 @@ def cmd_review(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
         else:
             raw, metadata = call_model(cfg, "review", instructions, user_input)
             result = parse_json_response(raw)
+            result["source_sha256"] = chunk["source_sha256"]
+            result["translation_sha256"] = translation_hash
             write_json(result_path, result)
             write_json(meta_path, {"input_hash": input_hash, **metadata})
-            print(f"reviewed {chunk['chunk_id']}: {result.get('verdict', 'unknown')}")
+            messages.append(f"reviewed {chunk['chunk_id']}: {result.get('verdict', 'unknown')}")
+
+        # Older cached review files may predate canonical hash fields.
+        if result.get("source_sha256") != chunk["source_sha256"] or result.get("translation_sha256") != translation_hash:
+            result["source_sha256"] = chunk["source_sha256"]
+            result["translation_sha256"] = translation_hash
+            write_json(result_path, result)
 
         final_result = result
         if result.get("verdict") == "escalate" and args.escalate:
@@ -786,21 +1084,49 @@ def cmd_review(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
                 final_result = parse_json_response(raw)
                 write_json(adj_path, final_result)
                 write_json(adj_meta, {"input_hash": adj_hash, **metadata})
-            print(f"adjudicated {chunk['chunk_id']}: {final_result.get('verdict', 'unknown')}")
+            messages.append(f"adjudicated {chunk['chunk_id']}: {final_result.get('verdict', 'unknown')}")
 
         corrected = final_result.get("corrected_translation")
         if corrected:
             reviewed_path = ROOT / "output" / "chunks" / f"{chunk['chunk_id']}.reviewed.zh-Hant.md"
-            write_text(reviewed_path, str(corrected).strip() + "\n")
+            corrected_text = str(corrected).strip() + "\n"
+            write_text(reviewed_path, corrected_text)
+            write_json(
+                ROOT / "output" / "chunks" / f"{chunk['chunk_id']}.reviewed.meta.json",
+                {
+                    "chunk_id": chunk["chunk_id"],
+                    "source_sha256": chunk["source_sha256"],
+                    "translation_sha256": sha256_text(corrected_text),
+                    "review_input_sha256": translation_hash,
+                    "review_verdict": final_result.get("verdict"),
+                },
+            )
             if args.apply:
                 shutil.copyfile(reviewed_path, translation_path)
-                print(f"applied reviewed translation for {chunk['chunk_id']}")
+                translation_meta_path = ROOT / "output" / "chunks" / f"{chunk['chunk_id']}.meta.json"
+                translation_meta = load_json(translation_meta_path) if translation_meta_path.exists() else {}
+                translation_meta.update(
+                    {
+                        "chunk_id": chunk["chunk_id"],
+                        "source_sha256": chunk["source_sha256"],
+                        "translation_sha256": sha256_text(corrected_text),
+                        "applied_review_sha256": sha256_text(json.dumps(final_result, ensure_ascii=False, sort_keys=True)),
+                    }
+                )
+                write_json(translation_meta_path, translation_meta)
+                messages.append(f"applied reviewed translation for {chunk['chunk_id']}")
+        return messages
+
+    for chunk_messages in bounded_parallel_map(selected, review_one, jobs=jobs):
+        for message in chunk_messages:
+            print(message)
 
 
 def chosen_translation(chunk_id: str) -> Optional[Path]:
+    final = ROOT / "output" / "chunks" / f"{chunk_id}.final.zh-Hant.md"
     reviewed = ROOT / "output" / "chunks" / f"{chunk_id}.reviewed.zh-Hant.md"
     normal = ROOT / "output" / "chunks" / f"{chunk_id}.zh-Hant.md"
-    return reviewed if reviewed.exists() else normal if normal.exists() else None
+    return final if final.exists() else reviewed if reviewed.exists() else normal if normal.exists() else None
 
 
 def cmd_assemble(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
@@ -824,6 +1150,16 @@ def cmd_assemble(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
 
 
 def cmd_qa(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
+    if not any((getattr(args, "start", None), getattr(args, "end", None), getattr(args, "limit", None))):
+        from .quality import run_quality_gate
+
+        report = run_quality_gate(ROOT, cfg.get("quality"))
+        payload = report.to_dict()
+        write_json(ROOT / "output" / "qa-report.json", payload)
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        if not report.passed:
+            raise PipelineError(f"Formal quality gate found {report.error_count} error(s); see output/qa-report.json")
+        return
     chunks = selected_chunks(args)
     issues: List[Dict[str, Any]] = []
     target_forms: Dict[str, set] = {}
@@ -890,6 +1226,41 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--config", default=str(DEFAULT_CONFIG), help="project JSON config")
     sub = parser.add_subparsers(dest="command", required=True)
 
+    init = sub.add_parser("init", help="create an isolated project for a new PDF")
+    init.add_argument("source", help="source PDF")
+    init.add_argument("--project-dir", help="destination; defaults to books/<source-name>")
+    init.add_argument("--engine", choices=["codex", "api"], default="codex")
+    init.add_argument("--force", action="store_true", help="overwrite project templates if already initialized")
+
+    run = sub.add_parser("run", help="create and execute a durable end-to-end translation run")
+    run.add_argument("--engine", choices=["codex", "api"], default="codex")
+    run.add_argument("--jobs", type=int, help="maximum parallel workers; defaults to project worker_jobs")
+    run.add_argument("--run-id", help="stable run identifier")
+    run.add_argument("--notion", action="store_true", help="sync to Notion only after assembly passes")
+    run.add_argument("--force-prepare", action="store_true", help="rerun deterministic extraction and chunking")
+
+    resume = sub.add_parser("resume", help="continue the current durable run")
+    resume.add_argument("--run-id", help="resume a specific run instead of the current pointer")
+    resume.add_argument("--allow-input-drift", action="store_true", help="continue after explicitly reviewing changed immutable inputs")
+
+    status = sub.add_parser("status", help="show durable run progress, usage, failures, and input drift")
+    status.add_argument("--run-id", help="inspect a specific run")
+    status.add_argument("--tasks", action="store_true", help="include every task")
+
+    claim = sub.add_parser("work-claim", help=argparse.SUPPRESS)
+    claim.add_argument("--worker", required=True)
+    claim.add_argument("--run-id")
+    complete = sub.add_parser("work-complete", help=argparse.SUPPRESS)
+    complete.add_argument("task_id")
+    complete.add_argument("--worker", required=True)
+    complete.add_argument("--run-id")
+    fail = sub.add_parser("work-fail", help=argparse.SUPPRESS)
+    fail.add_argument("task_id")
+    fail.add_argument("--worker", required=True)
+    fail.add_argument("--run-id")
+    fail.add_argument("--error", required=True)
+    fail.add_argument("--block", action="store_true")
+
     sub.add_parser("doctor", help="check local tools and credentials")
     sub.add_parser("inspect", help="inspect PDF text availability")
     sub.add_parser("ocr", help="OCR the source PDF with OCRmyPDF")
@@ -906,6 +1277,7 @@ def build_parser() -> argparse.ArgumentParser:
     translate = sub.add_parser("translate", help="translate chunks")
     add_range_args(translate)
     translate.add_argument("--force", action="store_true", help="ignore matching cached model output")
+    translate.add_argument("--jobs", type=int, default=1, help="parallel API workers; use 3 for production")
 
     prepare = sub.add_parser("prepare", help="prepare translation packets for Codex without API calls")
     add_range_args(prepare)
@@ -915,6 +1287,7 @@ def build_parser() -> argparse.ArgumentParser:
     review.add_argument("--force", action="store_true", help="ignore matching cached model output")
     review.add_argument("--escalate", action="store_true", help="send only escalated cases to the adjudication model")
     review.add_argument("--apply", action="store_true", help="apply complete corrected translations after saving them separately")
+    review.add_argument("--jobs", type=int, default=1, help="parallel bilingual-review workers")
 
     assemble = sub.add_parser("assemble", help="assemble translated chunks into Markdown")
     assemble.add_argument("--allow-missing", action="store_true")
@@ -925,6 +1298,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 COMMANDS = {
     "doctor": cmd_doctor,
+    "run": cmd_run,
+    "resume": cmd_resume,
+    "status": cmd_status,
+    "work-claim": cmd_work_claim,
+    "work-complete": cmd_work_complete,
+    "work-fail": cmd_work_fail,
     "inspect": cmd_inspect,
     "ocr": cmd_ocr,
     "extract": cmd_extract,
@@ -940,10 +1319,16 @@ COMMANDS = {
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
+    global ROOT
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
-        cfg = load_config(config_path(args.config))
+        if args.command == "init":
+            cmd_init(args)
+            return 0
+        resolved_config = config_path(args.config).resolve()
+        ROOT = resolved_config.parent
+        cfg = load_config(resolved_config)
         COMMANDS[args.command](args, cfg)
         return 0
     except (PipelineError, subprocess.CalledProcessError) as exc:
