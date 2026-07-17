@@ -1,0 +1,55 @@
+{
+  "source_page_start": 2,
+  "source_page_end": 209,
+  "source_line_start": 65,
+  "source_line_end": 10500,
+  "source_language": "English",
+  "target_language": "Traditional Chinese",
+  "target_locale": "zh-Hant-TW",
+  "chunk_target_words": 1800,
+  "chunk_max_words": 2300,
+  "previous_translation_chars": 1200,
+  "source_neighbor_chars": 900,
+  "chapter_memory_chars": 3500,
+  "worker_jobs": 3,
+  "worker_group_chunks": 3,
+  "metadata_web_search": true,
+  "book_audit_enabled": true,
+  "max_output_tokens": {
+    "metadata": 3000,
+    "terminology": 3000,
+    "terminology_consolidate": 7000,
+    "translate": 10000,
+    "review": 7000,
+    "finalize": 9000,
+    "adjudicate": 7000,
+    "book_audit": 7000
+  },
+  "models": {
+    "metadata": "gpt-5.6-luna",
+    "terminology": "gpt-5.6-luna",
+    "terminology_consolidate": "gpt-5.6-sol",
+    "translate": "gpt-5.6-terra",
+    "review": "gpt-5.6-terra",
+    "finalize": "gpt-5.6-terra",
+    "adjudicate": "gpt-5.6-sol",
+    "book_audit": "gpt-5.6-sol"
+  },
+  "reasoning_effort": {
+    "metadata": "low",
+    "terminology": "low",
+    "terminology_consolidate": "medium",
+    "translate": "low",
+    "review": "medium",
+    "finalize": "medium",
+    "adjudicate": "high",
+    "book_audit": "high"
+  },
+  "source_text": "input/book.txt",
+  "source_format": "text",
+  "source_metadata": {
+    "title": "Diablo: The Kingdom of Shadow",
+    "author": "Richard A. Knaak",
+    "pages": 210
+  }
+}

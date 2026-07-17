@@ -256,6 +256,8 @@ def run_quality_gate(
                     "source_term": str(item.get("source_term", "")),
                     "target_term": str(item.get("target_term", "")),
                     "status": "approved",
+                    "category": str(item.get("category", "")),
+                    "generated": "true",
                 }
                 for item in generated.get("terms", [])
             )
@@ -264,6 +266,8 @@ def run_quality_gate(
                     "source_term": str(item.get("source_name", "")),
                     "target_term": str(item.get("target_name", "")),
                     "status": "approved",
+                    "category": "character",
+                    "generated": "true",
                 }
                 for item in generated.get("characters", [])
             )
@@ -633,15 +637,22 @@ def _check_terms(
     quality: JsonMap,
     report: QualityReport,
 ) -> None:
-    exceptions = set(quality.get("glossary_exceptions", {}).get(chunk_id, []))
+    raw_exceptions = quality.get("glossary_exceptions", {}).get(chunk_id, [])
+    exceptions = set(raw_exceptions) if not isinstance(raw_exceptions, Mapping) else set(raw_exceptions.keys())
     for row in glossary:
         source_term = row.get("source_term", "")
         target_term = row.get("target_term", "")
+        flags = 0 if row.get("generated") == "true" else re.IGNORECASE
+        source_matches = re.search(
+            rf"(?<![A-Za-z0-9]){re.escape(source_term)}(?![A-Za-z0-9])",
+            source,
+            flags,
+        ) is not None
         if (
             source_term
             and target_term
             and source_term not in exceptions
-            and source_term.casefold() in source.casefold()
+            and source_matches
             and target_term not in target
         ):
             _add(report, "approved_term_missing", "Approved glossary form is absent from target", chunk_id, path,

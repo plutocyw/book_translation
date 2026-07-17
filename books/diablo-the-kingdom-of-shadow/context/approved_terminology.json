@@ -1,0 +1,645 @@
+{
+  "terms": [
+    {
+      "source_term": "Ureh",
+      "target_term": "烏瑞",
+      "category": "place",
+      "notes": "失落聖城與本作主要舞臺；本作統一採用的暫定音譯，非官方譯名。"
+    },
+    {
+      "source_term": "Nymyr",
+      "target_term": "尼米爾山",
+      "category": "place",
+      "notes": "俯瞰烏瑞的山峰；本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_term": "Kehjistan",
+      "target_term": "卡基斯坦",
+      "category": "place",
+      "notes": "沿用專案既有核准的官方繁中譯名。"
+    },
+    {
+      "source_term": "Twin Seas",
+      "target_term": "雙子海",
+      "category": "place",
+      "notes": "沿用前作專案核准譯名。"
+    },
+    {
+      "source_term": "Western Kingdoms",
+      "target_term": "西方諸王國",
+      "category": "place",
+      "notes": "區域統稱；務必與 Westmarch（衛斯馬屈）區分。"
+    },
+    {
+      "source_term": "Westmarch",
+      "target_term": "衛斯馬屈",
+      "category": "place",
+      "notes": "沿用專案既有核准的官方繁中譯名；不是 Western Kingdoms。"
+    },
+    {
+      "source_term": "Gulf of Westmarch",
+      "target_term": "衛斯馬屈灣",
+      "category": "place",
+      "notes": "以既有核准地名 Westmarch（衛斯馬屈）構成。"
+    },
+    {
+      "source_term": "Lut Gholein",
+      "target_term": "魯高因",
+      "category": "place",
+      "notes": "系列地名；全書統一此形式。"
+    },
+    {
+      "source_term": "Kurast",
+      "target_term": "庫拉斯特",
+      "category": "place",
+      "notes": "系列地名；全書統一此形式。"
+    },
+    {
+      "source_term": "Entsteig",
+      "target_term": "恩斯泰格",
+      "category": "place",
+      "notes": "本作採用的暫定音譯，非官方譯名。"
+    },
+    {
+      "source_term": "Bastion of Light",
+      "target_term": "光明堡壘",
+      "category": "place",
+      "notes": "天界相關專名；全書統一此形式。"
+    },
+    {
+      "source_term": "Vizjerei",
+      "target_term": "費斯傑利",
+      "category": "organization",
+      "notes": "沿用專案既有核准的官方繁中譯名。"
+    },
+    {
+      "source_term": "Vizjerei brotherhood",
+      "target_term": "費斯傑利兄弟會",
+      "category": "organization",
+      "notes": "以既有核准名稱 Vizjerei（費斯傑利）構成。"
+    },
+    {
+      "source_term": "Zakarum",
+      "target_term": "撒卡蘭姆",
+      "category": "organization",
+      "notes": "沿用專案既有核准的官方繁中譯名。"
+    },
+    {
+      "source_term": "followers of Rathma",
+      "target_term": "拉斯瑪信徒",
+      "category": "organization",
+      "notes": "與 Rathmian、Rathmians、servant(s) of Rathma 指同一死靈法師傳統。"
+    },
+    {
+      "source_term": "Rathmian",
+      "target_term": "拉斯瑪信徒",
+      "category": "title",
+      "notes": "單數身分稱呼；與 followers of Rathma 統一。"
+    },
+    {
+      "source_term": "Rathmians",
+      "target_term": "拉斯瑪信徒",
+      "category": "organization",
+      "notes": "複數群體稱呼；與 followers of Rathma 統一。"
+    },
+    {
+      "source_term": "servant of Rathma",
+      "target_term": "拉斯瑪信徒",
+      "category": "title",
+      "notes": "依身分語境處理；與 followers of Rathma 統一。"
+    },
+    {
+      "source_term": "servants of Rathma",
+      "target_term": "拉斯瑪信徒",
+      "category": "organization",
+      "notes": "依群體語境處理；與 followers of Rathma 統一。"
+    },
+    {
+      "source_term": "necromancer",
+      "target_term": "死靈法師",
+      "category": "title",
+      "notes": "沿用專案既有核准的官方繁中職業名稱。"
+    },
+    {
+      "source_term": "Prime Evils",
+      "target_term": "三大罪惡之源",
+      "category": "concept",
+      "notes": "沿用專案既有核准的官方繁中術語。"
+    },
+    {
+      "source_term": "Prime Three",
+      "target_term": "三大罪惡之源",
+      "category": "concept",
+      "notes": "Prime Evils 的同義稱呼，不另立譯名。"
+    },
+    {
+      "source_term": "Heaven",
+      "target_term": "天堂",
+      "category": "concept",
+      "notes": "與 Hell 對舉的超自然領域；保留專名語氣。"
+    },
+    {
+      "source_term": "Hell",
+      "target_term": "地獄",
+      "category": "concept",
+      "notes": "與 Heaven 對舉的超自然領域；保留專名語氣。"
+    },
+    {
+      "source_term": "Sin War",
+      "target_term": "原罪之戰",
+      "category": "concept",
+      "notes": "系列歷史事件名稱。"
+    },
+    {
+      "source_term": "Balance",
+      "target_term": "平衡之道",
+      "category": "concept",
+      "notes": "拉斯瑪信徒奉行的核心教義；大寫專名語境採此譯法。"
+    },
+    {
+      "source_term": "mortal plane",
+      "target_term": "凡間",
+      "category": "concept",
+      "notes": "與天堂、地獄及烏瑞受困的中間界域相對。"
+    },
+    {
+      "source_term": "mortal world",
+      "target_term": "凡間",
+      "category": "concept",
+      "notes": "與 mortal plane 統一，不另造位面名稱。"
+    },
+    {
+      "source_term": "limbo",
+      "target_term": "虛無境域",
+      "category": "concept",
+      "notes": "烏瑞受困的無時間中間界域。"
+    },
+    {
+      "source_term": "shadow Ureh",
+      "target_term": "幽影烏瑞",
+      "category": "concept",
+      "notes": "指介於凡間與天堂之間、短暫顯現的烏瑞映像。"
+    },
+    {
+      "source_term": "Key to Light",
+      "target_term": "光明之鑰",
+      "category": "invented",
+      "notes": "尼米爾山頂的冰白魔法寶石；與 Key to Shadow 成對。"
+    },
+    {
+      "source_term": "Key to Shadow",
+      "target_term": "暗影之鑰",
+      "category": "invented",
+      "notes": "尼米爾山內深處的黑色魔法寶石；與 Key to Light 成對。"
+    },
+    {
+      "source_term": "Keys",
+      "target_term": "雙鑰",
+      "category": "invented",
+      "notes": "大寫且合稱兩件神器時使用；一般鑰匙不採此譯法。"
+    },
+    {
+      "source_term": "Light among Lights",
+      "target_term": "眾光之光",
+      "category": "title",
+      "notes": "烏瑞的象徵性尊稱；含定冠詞的 the Light among Lights 亦同。"
+    },
+    {
+      "source_term": "Kingdom of Shadow",
+      "target_term": "暗影王國",
+      "category": "title",
+      "notes": "對烏瑞的總結性稱呼，亦呼應本書書名。"
+    },
+    {
+      "source_term": "Warlord of Blood",
+      "target_term": "鮮血魔將",
+      "category": "title",
+      "notes": "霸圖克的固定頭銜；沿用前作專案核准譯名，不採「鮮血督軍」。"
+    },
+    {
+      "source_term": "Lord of Terror",
+      "target_term": "恐懼之王",
+      "category": "title",
+      "notes": "迪亞布羅的固定頭銜。"
+    },
+    {
+      "source_term": "Lord of Hatred",
+      "target_term": "憎恨之王",
+      "category": "title",
+      "notes": "墨菲斯托的固定頭銜。"
+    },
+    {
+      "source_term": "Lord of Destruction",
+      "target_term": "毀滅之王",
+      "category": "title",
+      "notes": "巴爾的固定頭銜。"
+    },
+    {
+      "source_term": "archangel",
+      "target_term": "大天使",
+      "category": "title",
+      "notes": "超自然位階名稱；複數 archangels 亦採此形式。"
+    },
+    {
+      "source_term": "Trag’Oul",
+      "target_term": "塔格奧",
+      "category": "other",
+      "notes": "沿用專案既有核准的官方繁中名稱；直引號 Trag'Oul 視為同一來源別形。"
+    },
+    {
+      "source_term": "the Dragon",
+      "target_term": "巨龍",
+      "category": "title",
+      "notes": "拉斯瑪信徒語境中指塔格奧，不作泛指其他龍。"
+    },
+    {
+      "source_term": "Great Dragon",
+      "target_term": "偉大巨龍",
+      "category": "title",
+      "notes": "拉斯瑪信徒對塔格奧的尊稱。"
+    },
+    {
+      "source_term": "Den’Trag",
+      "target_term": "丹‧塔格",
+      "category": "technical",
+      "notes": "沿用專案核准法術譯名；直引號 Den'Trag 視為同一別形，且不可與塔格奧之爪或塔格奧之牙混同。"
+    },
+    {
+      "source_term": "Teeth of the Dragon Trag’Oul",
+      "target_term": "巨龍塔格奧之牙",
+      "category": "technical",
+      "notes": "沿用專案核准的完整法術名稱；直引號 Trag'Oul 視為同一別形。"
+    },
+    {
+      "source_term": "Teeth of Trag’Oul",
+      "target_term": "塔格奧之牙",
+      "category": "technical",
+      "notes": "巨龍塔格奧之牙的短稱；直引號 Trag'Oul 視為同一別形，且不可與塔格奧之爪或丹‧塔格混同。"
+    },
+    {
+      "source_term": "Talon of Trag’Oul",
+      "target_term": "塔格奧之爪",
+      "category": "technical",
+      "notes": "召出骨矛的死靈法術；直引號 Trag'Oul 視為同一別形，且不可與丹‧塔格或塔格奧之牙混同。"
+    },
+    {
+      "source_term": "Talons of Trag’Oul",
+      "target_term": "塔格奧之爪",
+      "category": "technical",
+      "notes": "Talon of Trag’Oul 的複數來源形式；直引號 Trag'Oul 視為同一別形，且不可與丹‧塔格或塔格奧之牙混同。"
+    },
+    {
+      "source_term": "ivory dagger",
+      "target_term": "象牙匕首",
+      "category": "technical",
+      "notes": "札伊爾反覆使用的施法媒介。"
+    },
+    {
+      "source_term": "Turinnash",
+      "target_term": "圖林納許",
+      "category": "invented",
+      "notes": "費斯傑利的符文防護斗篷，原文亦解作 spirit mantle；本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_term": "spirit mantle",
+      "target_term": "靈魂披風",
+      "category": "invented",
+      "notes": "Turinnash 的原文語義解釋。"
+    },
+    {
+      "source_term": "ward",
+      "target_term": "防護結界",
+      "category": "technical",
+      "notes": "依語境可指入口、物件或建築上的魔法防護；不固定誤譯為實體法印。"
+    },
+    {
+      "source_term": "glamour",
+      "target_term": "幻惑術",
+      "category": "technical",
+      "notes": "涵蓋隱蔽感官與扭曲心智的幻惑魔法；按句意調整，但術系名稱保持一致。"
+    },
+    {
+      "source_term": "golem",
+      "target_term": "魔像",
+      "category": "invented",
+      "notes": "受魔法驅動的人造構造體；不可與 gargoyle（石像鬼）混同。"
+    },
+    {
+      "source_term": "gargoyle",
+      "target_term": "石像鬼",
+      "category": "invented",
+      "notes": "有翼魔法守衛；不可與 golem（魔像）混同。"
+    },
+    {
+      "source_term": "ghoul",
+      "target_term": "食屍鬼",
+      "category": "invented",
+      "notes": "烏瑞居民異變後的亡者形態。"
+    },
+    {
+      "source_term": "imp",
+      "target_term": "小惡魔",
+      "category": "invented",
+      "notes": "低階惡魔種類。"
+    },
+    {
+      "source_term": "Winged Fiends",
+      "target_term": "翼魔",
+      "category": "invented",
+      "notes": "具翼惡魔類別；大寫群體名稱全書統一。"
+    },
+    {
+      "source_term": "tentacle beast",
+      "target_term": "觸手獸",
+      "category": "invented",
+      "notes": "卡基斯坦河域的巨型蛇狀生物。"
+    },
+    {
+      "source_term": "hell cat",
+      "target_term": "地獄貓",
+      "category": "invented",
+      "notes": "與 demon cat 指同一類猛獸。"
+    },
+    {
+      "source_term": "demon cat",
+      "target_term": "地獄貓",
+      "category": "invented",
+      "notes": "與 hell cat 統一，不另立名稱。"
+    },
+    {
+      "source_term": "carpet beast",
+      "target_term": "壁毯怪",
+      "category": "invented",
+      "notes": "與 tapestry creature 指同一種可展開包覆獵物的怪物。"
+    },
+    {
+      "source_term": "tapestry creature",
+      "target_term": "壁毯怪",
+      "category": "invented",
+      "notes": "與 carpet beast 統一，不另立名稱。"
+    },
+    {
+      "source_term": "Tezarka",
+      "target_term": "特札卡",
+      "category": "invented",
+      "notes": "反覆出現的咒語詞；本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_term": "Iron Maiden",
+      "target_term": "攻擊反噬",
+      "category": "technical",
+      "notes": "系列死靈法術名稱。"
+    },
+    {
+      "source_term": "corpse explosion",
+      "target_term": "屍體爆炸",
+      "category": "technical",
+      "notes": "系列死靈法術名稱。"
+    },
+    {
+      "source_term": "bone wall",
+      "target_term": "骨牆",
+      "category": "technical",
+      "notes": "系列死靈法術用語；bone barrier 在同一法術語境亦譯作骨牆。"
+    },
+    {
+      "source_term": "paladin",
+      "target_term": "聖騎士",
+      "category": "title",
+      "notes": "系列職業名稱。"
+    }
+  ],
+  "characters": [
+    {
+      "source_name": "Kentril Dumon",
+      "target_name": "肯崔爾‧杜蒙",
+      "aliases": "Kentril|Captain Dumon|Dumon|Captain Kentril Dumon|Kentril Dumon of Westmarch",
+      "role": "傭兵隊長、主要視角人物",
+      "notes": "本作統一採用的暫定音譯，非官方譯名；出身地為衛斯馬屈。"
+    },
+    {
+      "source_name": "Zayl",
+      "target_name": "札伊爾",
+      "aliases": "Zayl",
+      "role": "拉斯瑪死靈法師",
+      "notes": "本作統一採用的暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Gorst",
+      "target_name": "戈斯特",
+      "aliases": "Gorst",
+      "role": "肯崔爾的副手與摯友",
+      "notes": "本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Quov Tsin",
+      "target_name": "庫夫‧辛",
+      "aliases": "Quov|Tsin|Master Tsin",
+      "role": "費斯傑利法師、遠征雇主",
+      "notes": "本作統一採用的暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Atanna",
+      "target_name": "阿坦娜",
+      "aliases": "Princess Atanna",
+      "role": "烏瑞公主、尤里斯‧可汗之女",
+      "notes": "本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Juris Khan",
+      "target_name": "尤里斯‧可汗",
+      "aliases": "Juris|Lord Khan|Khan|Lord Juris Khan|Most Revered Juris Khan|Lord of Ureh",
+      "role": "烏瑞統治者",
+      "notes": "本作統一採用的暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Gregus Mazi",
+      "target_name": "葛雷格斯‧馬齊",
+      "aliases": "Gregus|Mazi|Master Mazi",
+      "role": "開啟通往烏瑞道路的法師與文獻作者",
+      "notes": "本作統一採用的暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Humbart Wessel",
+      "target_name": "漢巴特‧威瑟",
+      "aliases": "Humbart",
+      "role": "札伊爾會說話的頭骨同伴、前傭兵隊長",
+      "notes": "本作統一採用的暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Albord",
+      "target_name": "阿爾博德",
+      "aliases": "Alby",
+      "role": "肯崔爾麾下傭兵",
+      "notes": "Alby 為暱稱；本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Jodas",
+      "target_name": "喬達斯",
+      "aliases": "Jodas",
+      "role": "肯崔爾麾下傭兵",
+      "notes": "本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Brek",
+      "target_name": "布雷克",
+      "aliases": "Brek",
+      "role": "肯崔爾麾下傭兵",
+      "notes": "本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Orlif",
+      "target_name": "奧利夫",
+      "aliases": "Orlif",
+      "role": "肯崔爾麾下傭兵",
+      "notes": "本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Hargo",
+      "target_name": "哈戈",
+      "aliases": "Hargo",
+      "role": "肯崔爾麾下傭兵",
+      "notes": "本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Benjin",
+      "target_name": "班金",
+      "aliases": "Benjin",
+      "role": "肯崔爾麾下傭兵",
+      "notes": "本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Oskal",
+      "target_name": "奧斯卡爾",
+      "aliases": "Oskal",
+      "role": "肯崔爾麾下傭兵",
+      "notes": "本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Simon",
+      "target_name": "賽門",
+      "aliases": "Simon",
+      "role": "肯崔爾麾下傭兵",
+      "notes": "本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Tobio",
+      "target_name": "托比歐",
+      "aliases": "priest Tobio|Priest Tobio",
+      "role": "反對烏瑞飛昇計畫的祭司",
+      "notes": "本作統一採用的暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Nefriti",
+      "target_name": "妮芙莉蒂",
+      "aliases": "Nefriti",
+      "role": "以美貌女子外表誘捕傭兵的烏瑞居民",
+      "notes": "本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Zorea",
+      "target_name": "佐蕾雅",
+      "aliases": "Zorea",
+      "role": "以美貌女子外表誘捕傭兵的烏瑞居民",
+      "notes": "本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Mirakodus",
+      "target_name": "米拉科杜斯",
+      "aliases": "Archangel Mirakodus|Blessed Mirakodus|false Mirakodus",
+      "role": "尤里斯所崇奉的偽大天使、迪亞布羅的偽裝或投影",
+      "notes": "本作暫定音譯，非官方譯名；不要將其誤認為獨立的真正大天使。"
+    },
+    {
+      "source_name": "Diablo",
+      "target_name": "迪亞布羅",
+      "aliases": "Lord of Terror",
+      "role": "三大罪惡之源之一、恐懼之王",
+      "notes": "沿用專案既有核准的官方繁中角色名。"
+    },
+    {
+      "source_name": "Mephisto",
+      "target_name": "墨菲斯托",
+      "aliases": "Lord of Hatred",
+      "role": "三大罪惡之源之一、憎恨之王",
+      "notes": "沿用專案既有核准的官方繁中角色名。"
+    },
+    {
+      "source_name": "Baal",
+      "target_name": "巴爾",
+      "aliases": "Lord of Destruction",
+      "role": "三大罪惡之源之一、毀滅之王",
+      "notes": "沿用專案既有核准的官方繁中角色名。"
+    },
+    {
+      "source_name": "Bartuc",
+      "target_name": "霸圖克",
+      "aliases": "Warlord of Blood",
+      "role": "鮮血魔將",
+      "notes": "沿用專案既有核准譯名；不採候選誤譯「巴圖克」。"
+    },
+    {
+      "source_name": "Rathma",
+      "target_name": "拉斯瑪",
+      "aliases": "Rathma",
+      "role": "死靈法師傳統的核心人物",
+      "notes": "沿用專案既有核准的官方繁中角色名。"
+    },
+    {
+      "source_name": "Trag’Oul",
+      "target_name": "塔格奧",
+      "aliases": "Trag'Oul|the Dragon|Great Dragon",
+      "role": "拉斯瑪信徒所尊崇的巨龍",
+      "notes": "沿用專案既有核准的官方繁中名稱；曲引號與直引號來源形式視為同一名稱。"
+    },
+    {
+      "source_name": "Harkin Khan",
+      "target_name": "哈爾金‧可汗",
+      "aliases": "Harkin",
+      "role": "烏瑞歷史人物、演說者",
+      "notes": "本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Zular Khan",
+      "target_name": "祖拉爾‧可汗",
+      "aliases": "Zular",
+      "role": "阿坦娜的祖父、尤里斯之父",
+      "notes": "本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Jace",
+      "target_name": "傑斯",
+      "aliases": "Jace",
+      "role": "肯崔爾麾下傭兵",
+      "notes": "本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Mordecai",
+      "target_name": "莫迪凱",
+      "aliases": "Mordecai",
+      "role": "失蹤的傭兵",
+      "notes": "本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Toko",
+      "target_name": "托科",
+      "aliases": "Toko",
+      "role": "遭地獄貓殺害的傭兵",
+      "notes": "本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Lord Hyram",
+      "target_name": "海拉姆領主",
+      "aliases": "Hyram",
+      "role": "漢巴特‧威瑟手稿的收件人",
+      "notes": "本作暫定音譯，非官方譯名。"
+    },
+    {
+      "source_name": "Septumos",
+      "target_name": "塞普圖摩斯",
+      "aliases": "seven-eyed demon Septumos",
+      "role": "誓語中提及的七眼惡魔",
+      "notes": "本作暫定音譯，未確認官方繁中名稱。"
+    }
+  ]
+}

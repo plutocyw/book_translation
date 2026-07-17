@@ -200,6 +200,23 @@ class QualityGateTests(unittest.TestCase):
         self.assertEqual(marked["draft"]["status"], "stale")
         self.assertEqual(len(artifact_input_hash(a=1, b=2)), 64)
 
+    def test_short_glossary_terms_require_source_word_boundaries(self):
+        from translation_pipeline.quality import sha256_text
+
+        with (self.root / "context" / "glossary.csv").open("a", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=["source_term", "target_term", "status"])
+            writer.writerow({"source_term": "imp", "target_term": "小惡魔", "status": "approved"})
+            writer.writerow({"source_term": "ward", "target_term": "防護結界", "status": "approved"})
+        self.rows[1]["source"] = "He made a simple move forward."
+        self.rows[1]["source_sha256"] = sha256_text(self.rows[1]["source"])
+        (self.root / "build" / "chunks.jsonl").write_text(
+            "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in self.rows), encoding="utf-8"
+        )
+        self._write_artifacts(self.rows[1], self.targets["chunk-0002"])
+        self._assemble()
+        codes = {issue.code for issue in run_quality_gate(self.root).issues}
+        self.assertNotIn("approved_term_missing", codes)
+
 
 if __name__ == "__main__":
     unittest.main()

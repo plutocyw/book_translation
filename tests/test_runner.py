@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from translation_pipeline.runner import create_pipeline_run, current_run, expected_output
+from translation_pipeline.runner import consolidated_term_candidates, create_pipeline_run, current_run, expected_output
 
 
 class RunnerTests(unittest.TestCase):
@@ -13,7 +13,7 @@ class RunnerTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         for name in ("build", "context", "prompts", "input"):
             (self.root / name).mkdir()
-        (self.root / "input" / "book.pdf").write_bytes(b"pdf")
+        (self.root / "input" / "book.txt").write_text("source", encoding="utf-8")
         for name in ("metadata", "terminology", "terminology_consolidate", "translate", "review", "finalize"):
             (self.root / "prompts" / f"{name}.md").write_text(name, encoding="utf-8")
         (self.root / "context" / "project_brief.md").write_text("brief", encoding="utf-8")
@@ -45,7 +45,8 @@ class RunnerTests(unittest.TestCase):
         }
         self.cfg = {
             "_config_path": str(self.config_path),
-            "source_pdf": "input/book.pdf",
+            "source_text": "input/book.txt",
+            "source_format": "text",
             "models": models,
         }
 
@@ -65,6 +66,22 @@ class RunnerTests(unittest.TestCase):
         self.assertIn(("notion", "book-audit"), dependencies)
         self.assertEqual(current_run(self.root).run_id, "test")
         self.assertTrue(str(expected_output(self.root, run.task("translate:chunk-0001"))).endswith("chunk-0001.zh-Hant.md"))
+
+    def test_term_candidates_are_deduplicated_before_global_consolidation(self):
+        terms = self.root / "build" / "terms"
+        terms.mkdir()
+        (terms / "chunk-0001.json").write_text(
+            json.dumps({"terms": [{"source_term": "Trag’Oul", "proposed_target": "塔格奧", "category": "character", "confidence": "high", "notes": "official"}]}),
+            encoding="utf-8",
+        )
+        (terms / "chunk-0002.json").write_text(
+            json.dumps({"terms": [{"source_term": "Trag'Oul", "proposed_target": "塔格奧", "category": "character", "confidence": "high", "notes": "official"}]}),
+            encoding="utf-8",
+        )
+        candidates = consolidated_term_candidates(self.root)
+        self.assertEqual(len(candidates), 1)
+        self.assertEqual(candidates[0]["mentions"], 2)
+        self.assertEqual(candidates[0]["candidate_targets"], {"塔格奧": 2})
 
 
 if __name__ == "__main__":

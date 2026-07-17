@@ -208,8 +208,8 @@ def parse_project_metadata(
     book_text = book_path.read_text(encoding="utf-8")
     chapter_count = len(re.findall(r"^# [一二三四五六七八九十]+$", book_text, re.MULTILINE))
 
-    source_pdf_value = project.get("source_pdf")
-    source_path = _rooted(root_path, Path(source_pdf_value)) if source_pdf_value else None
+    source_value = project.get("source_pdf") or project.get("source_text") or project.get("source_file")
+    source_path = _rooted(root_path, Path(source_value)) if source_value else None
     source_hash = _file_sha256(source_path) if source_path else None
     completed_at_match = re.search(r"Completed (?:at|on):\s*(\d{4}-\d{2}-\d{2})", progress, re.IGNORECASE)
     is_complete = bool(re.search(r"^- Status:\s*complete\s*$", progress, re.MULTILINE | re.IGNORECASE))

@@ -3,11 +3,14 @@ import unittest
 from pathlib import Path
 
 from translation_pipeline.cli import (
+    configured_source,
     is_chapter_heading,
+    is_stop_heading,
     make_chunks,
     normalize_page_text,
     page_text_from_positioned_lines,
     parse_json_response,
+    text_page_records,
     word_count,
 )
 
@@ -82,9 +85,56 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(word_count("It's the author's book."), 4)
 
     def test_generic_chapter_headings(self):
-        for value in ("Chapter 1", "CHAPTER XII", "Part Two", "Prologue", "Thirty-One"):
+        for value in ("Chapter 1", "CHAPTER XII", "Part Two", "Prologue", "Thirty-One", "ONE", "TWENTY-THREE"):
             self.assertTrue(is_chapter_heading(value), value)
         self.assertFalse(is_chapter_heading("He entered chapter one of his life."))
+        self.assertTrue(is_stop_heading("ABOUT THEAUTHOR"))
+
+    def test_text_page_records_use_form_feed_and_requested_page_range(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "book.txt"
+            source.write_text(
+                "First paragraph continues\fonto page two.\n\nSecond paragraph.\fChapter 2\n\nOpening.",
+                encoding="utf-8",
+            )
+            pages = text_page_records(source, page_start=2, page_end=3)
+
+            self.assertEqual([row["page"] for row in pages], [2, 3])
+            self.assertFalse(pages[0]["continues_from_previous"])
+            self.assertFalse(pages[1]["continues_from_previous"])
+            self.assertEqual(pages[0]["sha256"], text_page_records(source, 2, 2)[0]["sha256"])
+
+    def test_text_page_records_mark_mid_paragraph_page_continuation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "book.txt"
+            source.write_text("A sentence continues\fon the next page.\n\n", encoding="utf-8")
+            pages = text_page_records(source)
+            self.assertTrue(pages[1]["continues_from_previous"])
+
+    def test_text_page_after_chapter_heading_is_not_joined_to_heading(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "book.txt"
+            source.write_text("FOUR\fOpening chapter paragraph.", encoding="utf-8")
+            pages = text_page_records(source)
+            self.assertFalse(pages[1]["continues_from_previous"])
+
+    def test_configured_source_supports_native_text_config(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cfg = {
+                "_config_path": str(root / "project.json"),
+                "source_format": "text",
+                "source_text": "input/book.txt",
+            }
+            self.assertEqual(configured_source(cfg), (root / "input" / "book.txt", "text"))
+
+    def test_text_line_bounds_preserve_original_page_numbers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "book.txt"
+            source.write_text("teaser\f\nONE\n\nStory.\f\nTWO\n\nMore.\f\nABOUT THEAUTHOR", encoding="utf-8")
+            pages = text_page_records(source, line_start=2, line_end=7)
+            self.assertEqual([row["page"] for row in pages], [2, 3])
+            self.assertTrue(pages[0]["text"].startswith("ONE"))
 
 
 if __name__ == "__main__":

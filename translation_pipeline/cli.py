@@ -97,7 +97,8 @@ class PipelineError(RuntimeError):
 
 def is_chapter_heading(value: str) -> bool:
     text = value.strip()
-    if text in CHAPTER_HEADINGS or text in NUMBER_WORD_HEADINGS:
+    folded = text.casefold()
+    if folded in {item.casefold() for item in CHAPTER_HEADINGS | NUMBER_WORD_HEADINGS}:
         return True
     if text.casefold() in {"prologue", "epilogue", "foreword", "afterword", "introduction"}:
         return True
@@ -109,7 +110,10 @@ def is_chapter_heading(value: str) -> bool:
 
 
 def is_stop_heading(value: str) -> bool:
-    return value.strip() in STOP_HEADINGS
+    text = value.strip()
+    return text.casefold() in {item.casefold() for item in STOP_HEADINGS} or re.fullmatch(
+        r"(?i)about\s+the\s*author(?:s)?", text
+    ) is not None
 
 
 def read_text(path: Path) -> str:
@@ -164,9 +168,46 @@ def load_config(path: Path) -> Dict[str, Any]:
     return cfg
 
 
+def merged_quality_config(cfg: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge durable, justified artifact exceptions without mutating an immutable run config."""
+
+    result = json.loads(json.dumps(cfg.get("quality", {})))
+    path = ROOT / "context" / "quality_exceptions.json"
+    if not path.exists():
+        return result
+    overrides = load_json(path)
+    for key, value in overrides.items():
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key].update(value)
+        else:
+            result[key] = value
+    return result
+
+
 def project_path(cfg: Dict[str, Any], value: str) -> Path:
     path = Path(value)
     return path if path.is_absolute() else Path(cfg["_config_path"]).parent / path
+
+
+def configured_source(cfg: Dict[str, Any]) -> Tuple[Path, str]:
+    """Resolve both legacy PDF configs and native text-source configs."""
+    source_format = str(cfg.get("source_format") or "").casefold()
+    if source_format == "text" or "source_text" in cfg:
+        value = cfg.get("source_text") or cfg.get("source_file")
+        if not value:
+            raise PipelineError("Text project config must define source_text or source_file")
+        return project_path(cfg, str(value)), "text"
+    if source_format == "pdf" or "source_pdf" in cfg:
+        value = cfg.get("source_pdf") or cfg.get("source_file")
+        if not value:
+            raise PipelineError("PDF project config must define source_pdf or source_file")
+        return project_path(cfg, str(value)), "pdf"
+    value = cfg.get("source_file")
+    if value:
+        source = project_path(cfg, str(value))
+        inferred = "text" if source.suffix.casefold() == ".txt" else "pdf"
+        return source, inferred
+    raise PipelineError("Project config must define source_pdf, source_text, or source_file")
 
 
 def prompt(name: str) -> str:
@@ -501,6 +542,7 @@ def cache_hit(meta_path: Path, input_hash: str, force: bool) -> bool:
 
 
 def cmd_doctor(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
+    source, source_format = configured_source(cfg)
     checks = {
         "python": sys.executable,
         "pdftotext": shutil.which("pdftotext") or "missing",
@@ -509,7 +551,8 @@ def cmd_doctor(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
         "ocrmypdf": shutil.which("ocrmypdf") or "optional/missing",
         "tesseract": shutil.which("tesseract") or "optional/missing",
         "OPENAI_API_KEY": "set" if os.environ.get("OPENAI_API_KEY") else "not set (only needed for model calls)",
-        "source_pdf": str(project_path(cfg, cfg["source_pdf"])),
+        "source": str(source),
+        "source_format": source_format,
     }
     try:
         import pypdf  # noqa: F401
@@ -670,9 +713,97 @@ def pdf_stats(pdf: Path) -> Dict[str, Any]:
     }
 
 
+def split_text_pages(source: Path) -> List[str]:
+    if not source.exists():
+        raise PipelineError(f"Text source not found: {source}")
+    try:
+        text = source.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise PipelineError(f"Text source is not valid UTF-8: {source}") from exc
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    pages = text.split("\f")
+    if len(pages) > 1 and not pages[-1].strip():
+        pages.pop()
+    return pages or [""]
+
+
+def text_page_records(
+    source: Path,
+    page_start: int = 1,
+    page_end: Optional[int] = None,
+    line_start: Optional[int] = None,
+    line_end: Optional[int] = None,
+) -> List[Dict[str, Any]]:
+    if line_start is None and line_end is None:
+        raw_pages = split_text_pages(source)
+        first_page = 1
+    else:
+        text = source.read_text(encoding="utf-8-sig").replace("\r\n", "\n").replace("\r", "\n")
+        lines = text.split("\n")
+        first_line = max(1, int(line_start or 1))
+        last_line = min(len(lines), int(line_end) if line_end is not None else len(lines))
+        if last_line < first_line:
+            return []
+        prefix = "\n".join(lines[: first_line - 1])
+        first_page = prefix.count("\f") + 1
+        selected = "\n".join(lines[first_line - 1 : last_line])
+        raw_pages = selected.split("\f")
+        if raw_pages and not raw_pages[-1].strip():
+            raw_pages.pop()
+    start = max(first_page, int(page_start))
+    last_available_page = first_page + len(raw_pages) - 1
+    end = min(last_available_page, int(page_end) if page_end is not None else last_available_page)
+    if start > last_available_page or end < start:
+        return []
+    records: List[Dict[str, Any]] = []
+    for index in range(start, end + 1):
+        raw_index = index - first_page
+        raw = raw_pages[raw_index]
+        text = normalize_page_text(raw)
+        first_block = next((block.strip() for block in re.split(r"\n\s*\n", text) if block.strip()), "")
+        previous_raw = raw_pages[raw_index - 1] if raw_index > 0 else ""
+        previous_has_paragraph_end = bool(re.search(r"\n[ \t]*\n[ \t]*$", previous_raw))
+        previous_text = normalize_page_text(previous_raw) if previous_raw else ""
+        previous_last_block = next(
+            (block.strip() for block in reversed(re.split(r"\n\s*\n", previous_text)) if block.strip()), ""
+        )
+        continues = (
+            index != start
+            and not previous_has_paragraph_end
+            and not is_chapter_heading(first_block)
+            and not is_chapter_heading(previous_last_block)
+        )
+        records.append(
+            {
+                "page": index,
+                "characters": len(text),
+                "words": word_count(text),
+                "sha256": sha256_text(text),
+                "continues_from_previous": continues,
+                "text": text,
+            }
+        )
+    return records
+
+
+def text_stats(source: Path) -> Dict[str, Any]:
+    pages = text_page_records(source)
+    counts = [row["characters"] for row in pages]
+    low = [row["page"] for row in pages if row["characters"] < 80]
+    return {
+        "file": str(source),
+        "format": "text",
+        "pages": len(pages),
+        "characters_extracted": sum(counts),
+        "median_characters_per_page": sorted(counts)[len(counts) // 2] if counts else 0,
+        "low_text_pages": low,
+        "likely_scanned": False,
+    }
+
+
 def cmd_inspect(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
-    pdf = project_path(cfg, cfg["source_pdf"])
-    stats = pdf_stats(pdf)
+    source, source_format = configured_source(cfg)
+    stats = text_stats(source) if source_format == "text" else pdf_stats(source)
     write_json(ROOT / "build" / "inspection.json", stats)
     print(json.dumps(stats, ensure_ascii=False, indent=2))
     if stats["likely_scanned"]:
@@ -680,7 +811,9 @@ def cmd_inspect(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
 
 
 def cmd_ocr(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
-    source = project_path(cfg, cfg["source_pdf"])
+    source, source_format = configured_source(cfg)
+    if source_format != "pdf":
+        raise PipelineError("OCR is only available for PDF sources")
     executable = shutil.which("ocrmypdf")
     if not executable:
         raise PipelineError("ocrmypdf is not installed")
@@ -693,11 +826,35 @@ def cmd_ocr(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
 
 
 def cmd_extract(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
+    source, source_format = configured_source(cfg)
+    if source_format == "text":
+        page_start = max(1, int(cfg.get("source_page_start", 1)))
+        page_end_value = cfg.get("source_page_end")
+        page_end = int(page_end_value) if page_end_value is not None else None
+        line_start_value = cfg.get("source_line_start")
+        line_end_value = cfg.get("source_line_end")
+        pages = text_page_records(
+            source,
+            page_start,
+            page_end,
+            int(line_start_value) if line_start_value is not None else None,
+            int(line_end_value) if line_end_value is not None else None,
+        )
+        if not pages:
+            raise PipelineError("Configured text page range contains no pages")
+        write_jsonl(ROOT / "build" / "pages.jsonl", pages)
+        low = [row["page"] for row in pages if row["characters"] < 80]
+        print(f"Extracted {len(pages)} pages and {sum(row['words'] for row in pages):,} words.")
+        if low:
+            preview = ", ".join(str(x) for x in low[:20])
+            suffix = "..." if len(low) > 20 else ""
+            print(f"Warning: {len(low)} low-text pages ({preview}{suffix}); inspect for blank pages.")
+        return
     try:
         import pdfplumber
     except ImportError as exc:
         raise PipelineError("pdfplumber is required; run: python3 -m pip install -e .") from exc
-    pdf = project_path(cfg, cfg["source_pdf"])
+    pdf = source
     if not pdf.exists():
         raise PipelineError(f"PDF not found: {pdf}")
     pages: List[Dict[str, Any]] = []
@@ -1153,7 +1310,7 @@ def cmd_qa(args: argparse.Namespace, cfg: Dict[str, Any]) -> None:
     if not any((getattr(args, "start", None), getattr(args, "end", None), getattr(args, "limit", None))):
         from .quality import run_quality_gate
 
-        report = run_quality_gate(ROOT, cfg.get("quality"))
+        report = run_quality_gate(ROOT, merged_quality_config(cfg))
         payload = report.to_dict()
         write_json(ROOT / "output" / "qa-report.json", payload)
         print(json.dumps(payload, ensure_ascii=False, indent=2))
@@ -1226,8 +1383,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--config", default=str(DEFAULT_CONFIG), help="project JSON config")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    init = sub.add_parser("init", help="create an isolated project for a new PDF")
-    init.add_argument("source", help="source PDF")
+    init = sub.add_parser("init", help="create an isolated project for a new PDF or UTF-8 text file")
+    init.add_argument("source", help="source PDF or UTF-8 .txt file")
     init.add_argument("--project-dir", help="destination; defaults to books/<source-name>")
     init.add_argument("--engine", choices=["codex", "api"], default="codex")
     init.add_argument("--force", action="store_true", help="overwrite project templates if already initialized")
@@ -1262,7 +1419,7 @@ def build_parser() -> argparse.ArgumentParser:
     fail.add_argument("--block", action="store_true")
 
     sub.add_parser("doctor", help="check local tools and credentials")
-    sub.add_parser("inspect", help="inspect PDF text availability")
+    sub.add_parser("inspect", help="inspect source text availability")
     sub.add_parser("ocr", help="OCR the source PDF with OCRmyPDF")
     sub.add_parser("extract", help="extract normalized page text")
     sub.add_parser("chunk", help="create paragraph-aware translation chunks")

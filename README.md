@@ -1,6 +1,6 @@
 # Traditional Chinese book translation pipeline
 
-This repository turns a PDF into a publication-quality Traditional Chinese (`zh-Hant-TW`) translation. It supports Codex with parallel subagents and a fully unattended OpenAI API mode. Both engines share the same durable task graph, provenance checks, ordered finalizer, formal quality gate, and resumable Notion sync.
+This repository turns a PDF or UTF-8 ebook text file into a publication-quality Traditional Chinese (`zh-Hant-TW`) translation. It supports Codex with parallel subagents and a fully unattended OpenAI API mode. Both engines share the same durable task graph, provenance checks, ordered finalizer, formal quality gate, and resumable Notion sync.
 
 Copyrighted PDFs, generated book text, API checkpoints, and SQLite run state are kept out of Git.
 
@@ -19,6 +19,8 @@ Create an isolated workspace and start the run:
 
 ```bash
 book-translate init /path/to/book.pdf --project-dir books/my-book
+# Native form-feed text is also supported:
+book-translate init /path/to/book.txt --project-dir books/my-text-book
 book-translate --config books/my-book/project.json run --engine codex --jobs 3
 ```
 
@@ -41,6 +43,8 @@ book-translate --config books/my-book/project.json resume
 ```
 
 The current run is stored under `.book-translate/runs/<run-id>/`. Its immutable manifest fingerprints the source, config, prompts, and user-maintained references. Its SQLite queue records dependencies, leases, retries, hashes, model roles, token use, failures, and stale downstream work.
+
+Text projects use `source_format: "text"` and `source_text: "input/book.txt"`. When an ebook export contains previews or appended back matter inside the same virtual page, set `source_line_start` and `source_line_end` for an exact, reproducible narrative boundary; the original text remains unchanged.
 
 ## Pipeline and parallelization
 

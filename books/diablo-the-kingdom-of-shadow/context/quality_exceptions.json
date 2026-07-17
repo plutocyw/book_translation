@@ -1,0 +1,10 @@
+{
+  "glossary_exceptions": {
+    "chunk-0011": {
+      "ward": "The source uses the ordinary verb phrase 'ward them off'; the contextually correct target is 驅退, not the glossary's magical-object noun 防護結界."
+    },
+    "chunk-0049": {
+      "the Dragon": "This occurrence is inside the shortened spell name 'Teeth of the Dragon'; the approved contextual short form is 塔格奧之牙, while standalone the Dragon remains 巨龍."
+    }
+  }
+}

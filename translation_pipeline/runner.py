@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 import shutil
 import threading
 import time
@@ -95,7 +96,7 @@ def create_pipeline_run(
     config_path = Path(cfg["_config_path"])
     run = create_run(
         root / RUNS_DIR,
-        source=cli.project_path(cfg, cfg["source_pdf"]),
+        source=cli.configured_source(cfg)[0],
         config=config_path,
         prompts=_prompts(root),
         references=_references(root),
@@ -223,6 +224,59 @@ def _usage(metadata: Mapping[str, Any]) -> Dict[str, Any]:
     return result
 
 
+def consolidated_term_candidates(root: Path) -> List[Dict[str, Any]]:
+    """Deduplicate per-chunk term scans before the single global consolidation pass."""
+
+    aggregate: Dict[str, Dict[str, Any]] = {}
+    for path in sorted((root / "build" / "terms").glob("chunk-*.json")):
+        value = json.loads(path.read_text(encoding="utf-8"))
+        for item in value.get("terms", []):
+            source = str(item.get("source_term", "")).strip()
+            if not source:
+                continue
+            key = source.replace("’", "'").casefold()
+            entry = aggregate.setdefault(
+                key,
+                {
+                    "source_forms": {},
+                    "candidate_targets": {},
+                    "categories": {},
+                    "confidence": {},
+                    "notes": [],
+                    "chunks": [],
+                },
+            )
+            entry["source_forms"][source] = entry["source_forms"].get(source, 0) + 1
+            target = str(item.get("proposed_target", "")).strip()
+            if target:
+                entry["candidate_targets"][target] = entry["candidate_targets"].get(target, 0) + 1
+            category = str(item.get("category", "other"))
+            entry["categories"][category] = entry["categories"].get(category, 0) + 1
+            confidence = str(item.get("confidence", ""))
+            if confidence:
+                entry["confidence"][confidence] = entry["confidence"].get(confidence, 0) + 1
+            note = str(item.get("notes", "")).strip()
+            if note and note not in entry["notes"] and len(entry["notes"]) < 3:
+                entry["notes"].append(note)
+            entry["chunks"].append(path.stem)
+    result = []
+    for entry in aggregate.values():
+        source = max(entry["source_forms"], key=entry["source_forms"].get)
+        result.append(
+            {
+                "source_term": source,
+                "mentions": sum(entry["source_forms"].values()),
+                "source_forms": entry["source_forms"],
+                "candidate_targets": entry["candidate_targets"],
+                "categories": entry["categories"],
+                "confidence": entry["confidence"],
+                "notes": entry["notes"],
+                "first_chunk": min(entry["chunks"]),
+            }
+        )
+    return sorted(result, key=lambda item: (-item["mentions"], item["source_term"].casefold()))
+
+
 def _write_approved_references(root: Path, result: Mapping[str, Any]) -> None:
     """Persist generated terminology without mutating the immutable user registries."""
 
@@ -267,7 +321,7 @@ def execute_task(root: Path, cfg: Dict[str, Any], lease: TaskLease) -> TaskResul
         return TaskResult(sha256_file(output), _usage(metadata), model)
 
     if stage == "terminology_consolidate":
-        proposals = [json.loads(path.read_text(encoding="utf-8")) for path in sorted((root / "build" / "terms").glob("chunk-*.json"))]
+        proposals = consolidated_term_candidates(root)
         role = "terminology_consolidate" if "terminology_consolidate" in cfg.get("models", {}) else "adjudicate"
         raw, metadata = cli.call_model(
             cfg,
@@ -345,7 +399,7 @@ def execute_task(root: Path, cfg: Dict[str, Any], lease: TaskLease) -> TaskResul
     if stage == "quality":
         from .quality import run_quality_gate
 
-        report = run_quality_gate(root, cfg.get("quality"))
+        report = run_quality_gate(root, cli.merged_quality_config(cfg))
         output = root / "output" / "qa-report.json"
         cli.write_json(output, report.to_dict())
         report.raise_for_errors()
@@ -496,7 +550,25 @@ def expected_output(root: Path, task: Mapping[str, Any]) -> Path:
     return paths[stage]
 
 
-def _codex_packet(root: Path, task: Mapping[str, Any], output: Path) -> str:
+def _translation_snapshot(root: Path, run: RunStore):
+    from . import cli
+    from .workers import ContextSnapshot, make_context_snapshot
+
+    path = run.path / "translation-context.json"
+    if path.exists():
+        return ContextSnapshot(**json.loads(path.read_text(encoding="utf-8")))
+    snapshot = make_context_snapshot(
+        root,
+        prompt_text=cli.prompt("translate"),
+        reference_text=cli.approved_reference_snapshot(),
+        memory_chars=3500,
+        pilot_chars=0,
+    )
+    path.write_text(json.dumps(snapshot.as_dict(), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return snapshot
+
+
+def _codex_packet(root: Path, task: Mapping[str, Any], output: Path, run: RunStore) -> str:
     """Materialize the exact, bounded context a Codex worker should consume."""
 
     from . import cli
@@ -515,12 +587,22 @@ def _codex_packet(root: Path, task: Mapping[str, Any], output: Path) -> str:
         chunk = _chunk(root, chunk_id)
         body = f"PROJECT BRIEF\n{cli.read_text(root / 'context' / 'project_brief.md')}\n\nSOURCE\n{chunk['source']}"
     elif stage == "terminology_consolidate":
-        proposals = [json.loads(path.read_text(encoding="utf-8")) for path in sorted((root / "build" / "terms").glob("chunk-*.json"))]
+        proposals = consolidated_term_candidates(root)
         body = f"EXISTING APPROVED REFERENCES\n{cli.approved_reference_snapshot()}\n\nPROPOSALS\n{json.dumps(proposals, ensure_ascii=False)}"
     elif stage == "translate":
+        from .workers import immutable_translation_input
+
         cfg = json.loads((root / "project.json").read_text(encoding="utf-8"))
-        cfg["_config_path"] = str(root / "project.json")
-        body = cli.translation_input(cfg, _chunk(root, chunk_id))
+        chunks = list(cli.iter_jsonl(root / "build" / "chunks.jsonl"))
+        position = next(index for index, row in enumerate(chunks) if row["chunk_id"] == chunk_id)
+        snapshot = _translation_snapshot(root, run)
+        body = immutable_translation_input(
+            snapshot,
+            chunks,
+            position,
+            cli.relevant_reference(chunks[position]["source"]),
+            neighbor_chars=int(cfg.get("source_neighbor_chars", 900)),
+        )
     elif stage == "review":
         chunk = _chunk(root, chunk_id)
         body = cli.review_input(chunk, cli.read_text(root / "output" / "chunks" / f"{chunk_id}.zh-Hant.md"))
@@ -564,7 +646,7 @@ def claim_codex_task(root: Path, run: RunStore, worker_id: str) -> Optional[Dict
     packet_dir = root / "build" / "packets" / run.run_id
     packet_dir.mkdir(parents=True, exist_ok=True)
     packet_path = packet_dir / f"{lease.task_id.replace(':', '--')}.md"
-    packet_path.write_text(_codex_packet(root, task, output), encoding="utf-8")
+    packet_path.write_text(_codex_packet(root, task, output, run), encoding="utf-8")
     descriptor = {
         "run_id": run.run_id,
         "task_id": lease.task_id,
@@ -609,6 +691,7 @@ def complete_codex_task(root: Path, run: RunStore, task_id: str, worker_id: str)
         raise ValueError("Cannot complete a book audit that requires revision")
     elif stage == "translate":
         chunk = _chunk(root, chunk_id)
+        _validate_codex_target(root, chunk, output)
         cli.write_json(
             root / "output" / "chunks" / f"{chunk_id}.meta.json",
             {
@@ -622,10 +705,15 @@ def complete_codex_task(root: Path, run: RunStore, task_id: str, worker_id: str)
     elif stage == "review":
         chunk = _chunk(root, chunk_id)
         draft = root / "output" / "chunks" / f"{chunk_id}.zh-Hant.md"
+        if value.get("verdict") not in {"pass", "revise", "escalate"} or not isinstance(value.get("issues"), list):
+            raise ValueError("Review must contain a valid verdict and issues list")
+        if value.get("verdict") == "revise" and not value.get("corrected_translation"):
+            raise ValueError("A revise review must include the complete corrected_translation")
         value.update({"source_sha256": chunk["source_sha256"], "translation_sha256": sha256_file(draft)})
         cli.write_json(output, value)
     elif stage == "finalize":
         chunk = _chunk(root, chunk_id)
+        _validate_codex_target(root, chunk, output)
         draft = root / "output" / "chunks" / f"{chunk_id}.zh-Hant.md"
         review = root / "output" / "reviews" / f"{chunk_id}.review.json"
         cli.write_json(
@@ -642,3 +730,38 @@ def complete_codex_task(root: Path, run: RunStore, task_id: str, worker_id: str)
         )
     run.succeed(task_id, worker_id, sha256_file(output), model=task.get("model"))
     return output
+
+
+def _validate_codex_target(root: Path, chunk: Mapping[str, Any], output: Path) -> None:
+    """Reject structurally incomplete or visibly unsafe Codex prose before queue commit."""
+
+    from .quality import HIGH_CONFIDENCE_SIMPLIFIED, PLACEHOLDER_RE
+
+    target = output.read_text(encoding="utf-8")
+    if not target.strip():
+        raise ValueError("Translation output is empty")
+    source_paragraphs = [part for part in re.split(r"\n\s*\n", str(chunk["source"]).strip()) if part.strip()]
+    target_paragraphs = [part for part in re.split(r"\n\s*\n", target.strip()) if part.strip()]
+    if len(source_paragraphs) != len(target_paragraphs):
+        cfg = json.loads((root / "project.json").read_text(encoding="utf-8"))
+        exception = (cfg.get("quality", {}).get("paragraph_count_exceptions", {}) or {}).get(chunk["chunk_id"])
+        allowed = (
+            isinstance(exception, Mapping)
+            and exception.get("source") == len(source_paragraphs)
+            and exception.get("target") == len(target_paragraphs)
+            and bool(exception.get("reason"))
+        )
+        if not allowed:
+            raise ValueError(
+                f"Paragraph count mismatch for {chunk['chunk_id']}: source={len(source_paragraphs)} target={len(target_paragraphs)}"
+            )
+    source_first = source_paragraphs[0].strip() if source_paragraphs else ""
+    if source_first and re.fullmatch(r"(?i)(?:chapter\s+)?(?:[ivxlcdm]+|[a-z]+(?:-[a-z]+)?)", source_first):
+        if not target_paragraphs or not target_paragraphs[0].lstrip().startswith("#"):
+            raise ValueError(f"Chapter heading is not Markdown H1 in {chunk['chunk_id']}")
+    simplified = sorted({char for char in target if char in HIGH_CONFIDENCE_SIMPLIFIED})
+    if simplified:
+        raise ValueError(f"High-confidence Simplified Chinese in {chunk['chunk_id']}: {''.join(simplified)}")
+    placeholder = PLACEHOLDER_RE.search(target)
+    if placeholder:
+        raise ValueError(f"Unresolved placeholder in {chunk['chunk_id']}: {placeholder.group(0)}")

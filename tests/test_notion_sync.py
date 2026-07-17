@@ -132,11 +132,12 @@ class NotionSyncTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            (root / "source.pdf").write_bytes(b"unique source")
+            (root / "source.txt").write_bytes(b"unique source")
             (root / "project.json").write_text(
                 json.dumps(
                     {
-                        "source_pdf": "source.pdf",
+                        "source_text": "source.txt",
+                        "source_format": "text",
                         "source_language": "English",
                         "target_locale": "zh-Hant-TW",
                     }

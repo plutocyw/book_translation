@@ -73,6 +73,19 @@ def pdf_metadata(source: Path) -> Dict[str, Any]:
     return {"title": title, "author": author, "pages": len(reader.pages)}
 
 
+def text_metadata(source: Path) -> Dict[str, Any]:
+    """Return deterministic metadata for a UTF-8 text source.
+
+    Form-feed is the portable page delimiter used by plain-text book exports.
+    An empty final segment after a trailing form-feed is not a separate page.
+    """
+    text = source.read_text(encoding="utf-8-sig")
+    pages = text.split("\f")
+    if len(pages) > 1 and not pages[-1].strip():
+        pages.pop()
+    return {"title": "", "author": "", "pages": max(1, len(pages))}
+
+
 def initialize_project(source: Path, project_dir: Path, template_root: Path, force: bool = False) -> Path:
     source = source.expanduser().resolve()
     project_dir = project_dir.expanduser().resolve()
@@ -82,26 +95,41 @@ def initialize_project(source: Path, project_dir: Path, template_root: Path, for
     if config_path.exists() and not force:
         raise FileExistsError(f"Project already exists: {config_path}")
 
-    metadata = pdf_metadata(source)
+    suffix = source.suffix.casefold()
+    if suffix == ".pdf":
+        source_format = "pdf"
+        destination_name = "book.pdf"
+        metadata = pdf_metadata(source)
+    elif suffix == ".txt":
+        source_format = "text"
+        destination_name = "book.txt"
+        metadata = text_metadata(source)
+    else:
+        raise ValueError(f"Unsupported source format: {source.suffix or '(no extension)'}")
     (project_dir / "input").mkdir(parents=True, exist_ok=True)
     (project_dir / "context").mkdir(parents=True, exist_ok=True)
     (project_dir / "prompts").mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(source, project_dir / "input" / "book.pdf")
+    shutil.copyfile(source, project_dir / "input" / destination_name)
     for prompt_path in (template_root / "prompts").glob("*.md"):
         shutil.copyfile(prompt_path, project_dir / "prompts" / prompt_path.name)
 
     config = json.loads(json.dumps(DEFAULT_PROJECT_CONFIG))
+    if source_format == "text":
+        config.pop("source_pdf", None)
+        config["source_text"] = "input/book.txt"
+        config["source_format"] = "text"
     config["source_page_end"] = metadata["pages"]
     config["source_metadata"] = metadata
     config_path.write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-    title = metadata["title"] or "TODO: infer from the PDF"
-    author = metadata["author"] or "TODO: infer from the PDF"
+    title = metadata["title"] or f"TODO: infer from the {source_format} source"
+    author = metadata["author"] or f"TODO: infer from the {source_format} source"
+    source_description = "PDF" if source_format == "pdf" else "UTF-8 text"
     (project_dir / "context" / "project_brief.md").write_text(
         "# Project brief\n\n"
         f"- Book: *{title}*\n"
         f"- Author: {author}\n"
-        f"- Source edition: PDF supplied by the user; {metadata['pages']} pages\n"
+        f"- Source edition: {source_description} supplied by the user; {metadata['pages']} pages\n"
         "- Genre: TODO: infer and verify\n"
         "- Primary audience: Mature Traditional Chinese readers appropriate to the source genre\n"
         "- Locale: Taiwan (`zh-Hant-TW`)\n"
